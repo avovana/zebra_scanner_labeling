@@ -18,9 +18,18 @@
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
-QDebug operator<<( QDebug d, Position& u ) {
-    d << u.code << " " << QString::fromUtf8(u.name.c_str())  << " " <<u.expected << " " <<u.current << " " << QString::fromUtf8(u.vsd.c_str());
-    return d;
+ostream& operator<<( ostream&  out, Position& pos ) {
+    out << pos.code_tn_ved << " " << endl
+        << pos.document_type << " " << endl
+        << pos.document_number << " " << endl
+        << pos.document_date << " " << endl
+        << pos.vsd << " " << endl
+        << pos.expected << " " << endl
+        << pos.current << " " << endl
+        << pos.name  << " " << endl
+        << pos.inn << endl;
+
+    return out;
 }
 
 Dialog::Dialog(QWidget *parent) :
@@ -30,36 +39,37 @@ Dialog::Dialog(QWidget *parent) :
 {
     ui->setupUi(this);
 
-QString filename = "positions.xml";
-QFile file(filename);
+    pugi::xml_document doc;
+    if (!doc.load_file("positions.xml")) {
+        cout << "Не удалось загрузить XML документ" << endl;
+        return;
+    }
 
-if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-    qDebug() << "Failed to open file";
-    return;
-}
+    cout << "Считаны позиции:" << endl;
 
-QDomDocument document;
-if(!document.setContent(&file)){
-    qDebug() << "Failed to load document";
-    return;
-}
+    pugi::xml_node inn_xml = doc.child("resources").child("inn");
+    pugi::xml_node positions_xml = doc.child("resources").child("positions");
 
-file.close();
+    for (pugi::xml_node position_xml: positions_xml.children("position")) {
+        std::string position_name = position_xml.attribute("name").as_string();
 
-QDomElement root = document.firstChildElement();
-qDebug() << "root.tagName(): " << root.tagName();
+        Position position = Position(position_xml.attribute("code_tn_ved").as_string(),
+                                     position_xml.attribute("document_type").as_string(),
+                                     position_xml.attribute("document_number").as_string(),
+                                     position_xml.attribute("document_date").as_string(),
+                                     position_xml.attribute("vsd").as_string(),
+                                     position_xml.attribute("expected").as_int(),
+                                     position_xml.attribute("current").as_int(),
+                                     position_name,
+                                     inn_xml.text().get());
 
-QDomNodeList nodes = root.childNodes();
-for(int i = 0; i < nodes.count(); i++){
-    QDomNode domNode = nodes.at(i);
-    QDomElement domElement = domNode.toElement();
+        cout << "Считана позиция: " << endl << position << endl;
+        positions.insert({position_name, position});
+        ui->comboBox->addItem(QString::fromStdString(position_name));
+    }
 
-    Position position(domElement.attribute("code", ""), domElement.text().toUtf8().constData(), domElement.attribute("vsd", "").toUtf8().constData(), domElement.attribute("expected", "").toInt(), domElement.attribute("current", "").toInt());
-    qDebug() << position;
-    positions.insert({domElement.text(),position});
-    ui->comboBox->addItem(domElement.text());
-}
-
+    if(positions.empty())
+        cout << "Ошибка! Позиции не считаны!" << endl;
 }
 
 Dialog::~Dialog()
@@ -70,32 +80,27 @@ Dialog::~Dialog()
 
 void Dialog::barCodeEvent(string barCode)
 {
-    //Запись в файл.
-    //std::ofstream outfile;
-
-    std::string fileName = std::string("%Y.%m.%d-%H:%M");
-    //outfile.open(fileName, std::ios_base::app); // append instead of overwrite
+    std::string date = std::string("%Y-%m-%d");
 
     time_t t = time(0);   // get time now
     struct tm * now = localtime( & t );
 
-    char buffer [80];
-    strftime (buffer,80,fileName.c_str(),now);
+    char date_buffer [80];
+    strftime (date_buffer,80,date.c_str(),now);
     std::ofstream myfile;
 
     qDebug() << "current" << currentPosition.current;
     if(currentPosition.current == 0) {
-        qDebug() << "sdfsdfds";
-        myfile.open (std::string(buffer) + " " + currentPosition.name);
+        myfile.open (std::string(date_buffer) + " " + currentPosition.name);
         if(not myfile.is_open()) {
             std::cout<<"Error open file1"<<std::endl;
             return;
         }
         myfile << "ИНН участника оборота,ИНН производителя,ИНН собственника,Дата производства,Тип производственного заказа,Версия" << endl;
-        myfile << "1111111111,2222222222,3333333333,2019-01-01,Собственное производство,4" << endl;
+        myfile << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date << ",Собственное производство,4" << endl;
         myfile << "КИ,КИТУ,Дата производства,Код ТН,ВЭД,ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
 
-        qDebug() << "sdfsdfds222";
+        qDebug() << "Created file";
         myfile.close();
     }
 
@@ -107,48 +112,33 @@ void Dialog::barCodeEvent(string barCode)
 
     string path = current_path();
     cout << "path: " << path << endl;
-ulong max = 0;
-std::string maxPath = "";
-        for (const auto & file : directory_iterator(path)) {
-            std::string path_curr = file.path();
-            //cout << path_curr << endl;
+    ulong max = 0;
+    std::string maxPath = "";
+    for (const auto & file : directory_iterator(path)) {
+        std::string path_curr = file.path();
+        //cout << path_curr << endl;
 
-            std::string curName = currentPosition.name;
+        std::string curName = currentPosition.name;
 
-            std::size_t found = path_curr.find(curName);
-              if (found == std::string::npos)
-                  continue;
+        std::size_t found = path_curr.find(curName);
+          if (found == std::string::npos)
+              continue;
 
-            auto filename = file.path();
-            struct stat result;
-            if(stat(filename.c_str(), &result)==0)
-            {
-                //result.
-                auto mod_time = result.st_mtime;
-                //auto ddd = result.st_mtimensec;
-                cout << path_curr << " " << mod_time << endl;
+        auto filename = file.path();
+        struct stat result;
+        if(stat(filename.c_str(), &result)==0)
+        {
+            auto mod_time = result.st_mtime;
+            cout << path_curr << " " << mod_time << endl;
 
-                if(mod_time > max) {
-                    max = mod_time;
-                    maxPath = path_curr;
-                }
-
-                //cout << ddd << endl;
-                //cout << file.path() << " " << result.st_mtimensec << endl;
-                //...
+            if(mod_time > max) {
+                max = mod_time;
+                maxPath = path_curr;
             }
         }
+    }
 
-        cout << "maxPath: " << maxPath << " " << max << endl;
-
-//    auto filename = path;
-//    struct stat result;
-//    if(stat(filename.c_str(), &result)==0)
-//    {
-//        //auto mod_time = result.st_mtime;
-//        cout << result.st_mtimensec << endl;
-//        //...
-//    }
+    cout << "maxPath: " << maxPath << " " << max << endl;
 
     myfile.open (maxPath, std::ios_base::app);
     if(not myfile.is_open()) {
@@ -157,7 +147,7 @@ std::string maxPath = "";
     }
 
 //    myfile << "0104630033880100211AREwAwLETM7g240ffd0,2019-01-01,6401921000,Сертификат соответствия,123,2019-01-01,9CDA-5D57-FAEA-46DD-B94D-3DCC-AC70-1091" << endl;
-    myfile << barCode << "," << buffer <<",6401921000,Сертификат соответствия,123,2019-01-01," << currentPosition.vsd << endl;
+    myfile << barCode << "," << date_buffer <<",6401921000,Сертификат соответствия,123,2019-01-01," << currentPosition.vsd << endl;
 
     myfile.close();
 
@@ -209,14 +199,14 @@ std::string maxPath = "";
 
 void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
 {
-    auto it = positions.find(arg1);
+    auto it = positions.find(arg1.toUtf8().constData());
     if(it != positions.end()) {
         currentPosition = it->second;
         ui->label_6->setNum(currentPosition.expected);
         ui->label_7->setNum(currentPosition.current);
-        qDebug() << "currentPosition: " << currentPosition;
+        cout << "Текущая позиция: " << endl << currentPosition << endl;
     } else {
-        qDebug() << "не найдено соответствие";
+        cout << "Не найдено соответствие" << endl;
     }
 }
 
