@@ -45,8 +45,6 @@ Dialog::Dialog(QWidget *parent) :
         return;
     }
 
-    cout << "Считаны позиции:" << endl;
-
     pugi::xml_node inn_xml = doc.child("resources").child("inn");
     pugi::xml_node positions_xml = doc.child("resources").child("positions");
 
@@ -80,27 +78,32 @@ Dialog::~Dialog()
 
 void Dialog::barCodeEvent(string barCode)
 {
-    std::string date = std::string("%Y-%m-%d");
+    std::string date_pattern = std::string("%Y-%m-%d");
+    std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
 
-    time_t t = time(0);   // get time now
+    time_t t = time(0);
     struct tm * now = localtime( & t );
 
     char date_buffer [80];
-    strftime (date_buffer,80,date.c_str(),now);
+    char filename_buffer [80];
+    strftime (date_buffer,80,date_pattern.c_str(),now);
+    strftime (filename_buffer,80,filename_pattern.c_str(),now);
     std::ofstream myfile;
 
-    qDebug() << "current" << currentPosition.current;
+    cout << endl << "Сохранение скана для текущей позиции: " << endl << currentPosition << endl;
+
+    string filename = std::string(filename_buffer) + " " + currentPosition.name;
     if(currentPosition.current == 0) {
-        myfile.open (std::string(date_buffer) + " " + currentPosition.name);
+        myfile.open(filename);
         if(not myfile.is_open()) {
-            std::cout<<"Error open file1"<<std::endl;
+            std::cout<<"Ошибка создания файла шаблона"<<std::endl;
             return;
         }
         myfile << "ИНН участника оборота,ИНН производителя,ИНН собственника,Дата производства,Тип производственного заказа,Версия" << endl;
-        myfile << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date << ",Собственное производство,4" << endl;
+        myfile << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date_buffer << ",Собственное производство,4" << endl;
         myfile << "КИ,КИТУ,Дата производства,Код ТН,ВЭД,ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
 
-        qDebug() << "Created file";
+        cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
         myfile.close();
     }
 
@@ -111,25 +114,26 @@ void Dialog::barCodeEvent(string barCode)
     using std::filesystem::current_path;
 
     string path = current_path();
-    cout << "path: " << path << endl;
+
     ulong max = 0;
     std::string maxPath = "";
+
+    cout << "Шаблоны этой позиции:" << endl;
     for (const auto & file : directory_iterator(path)) {
         std::string path_curr = file.path();
-        //cout << path_curr << endl;
 
         std::string curName = currentPosition.name;
 
         std::size_t found = path_curr.find(curName);
-          if (found == std::string::npos)
-              continue;
+        if (found == std::string::npos)
+            continue;
 
         auto filename = file.path();
         struct stat result;
         if(stat(filename.c_str(), &result)==0)
         {
             auto mod_time = result.st_mtime;
-            cout << path_curr << " " << mod_time << endl;
+            cout << path_curr << endl;
 
             if(mod_time > max) {
                 max = mod_time;
@@ -138,63 +142,52 @@ void Dialog::barCodeEvent(string barCode)
         }
     }
 
-    cout << "maxPath: " << maxPath << " " << max << endl;
+    cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
 
     myfile.open (maxPath, std::ios_base::app);
     if(not myfile.is_open()) {
-        std::cout<<"Error open file2"<<std::endl;
+        std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
         return;
     }
 
-//    myfile << "0104630033880100211AREwAwLETM7g240ffd0,2019-01-01,6401921000,Сертификат соответствия,123,2019-01-01,9CDA-5D57-FAEA-46DD-B94D-3DCC-AC70-1091" << endl;
-    myfile << barCode << "," << date_buffer <<",6401921000,Сертификат соответствия,123,2019-01-01," << currentPosition.vsd << endl;
+    myfile << barCode << ","
+           << ","
+           << date_buffer << ","
+           << currentPosition.code_tn_ved << ","
+           << currentPosition.document_type << ","
+           << currentPosition.document_number << ","
+           << currentPosition.document_date << ","
+           << currentPosition.vsd << endl;
 
     myfile.close();
 
-    //==============================================
+    std::cout<<"Шаблон сохранен" << std::endl;
 
-    QString filename = "positions.xml";
-    QFile file(filename);
-
-    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)){
-        qDebug() << "Failed to open file";
+    pugi::xml_document doc;
+    if (not doc.load_file("positions.xml")) {
+        cout << "Не удалось загрузить XML документ" << endl;
         return;
     }
 
-    QDomDocument document;
-    if(!document.setContent(&file)){
-        qDebug() << "Failed to load document";
+    pugi::xml_node positions_xml = doc.child("resources").child("positions");
+
+    for (pugi::xml_node position_xml: positions_xml.children("position")) {
+        std::string position_name = position_xml.attribute("name").as_string();
+        if(position_name == currentPosition.name) {
+            ++currentPosition.current;
+            positions[currentPosition.name].current++;
+            position_xml.attribute("current").set_value(currentPosition.current);
+        }
+    }
+
+    if(not doc.save_file("positions.xml")) {
+        cout << "Не удалось сохранить XML документ" << endl;
         return;
     }
-
-    file.close();
-
-    QDomElement root = document.firstChildElement();
-    qDebug() << "root.tagName(): " << root.tagName();
-
-    QDomNodeList nodes = root.childNodes();
-    for(int i = 0; i < nodes.count(); i++){
-        QDomNode domNode = nodes.at(i);
-        QDomElement domElement = domNode.toElement();
-           qDebug() << "omElement.text() = " << domElement.text();
-           qDebug() << "omElement.nodeName() = " << domElement.nodeName();
-           qDebug() << "omElement.nodeValue() = " << domElement.nodeValue();
-           if(domElement.text().toUtf8().constData() == currentPosition.name) {
-               qDebug() << "1111" << domElement.text();
-               ++currentPosition.current;
-               domElement.setAttribute("current", currentPosition.current);
-        }
-    }
-
-    //=========================
-
-    if(file.open(QIODevice::WriteOnly)) {
-            QTextStream(&file) << document.toString();
-            file.close();
-        }
 
     ui->label_7->setNum(currentPosition.current);
 
+    cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
 }
 
 void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
