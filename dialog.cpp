@@ -80,14 +80,17 @@ void Dialog::barCodeEvent(string barCode)
 {
     std::string date_pattern = std::string("%Y-%m-%d");
     std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
+    std::string time_pattern = std::string("%H:%M:%S");
 
     time_t t = time(0);
     struct tm * now = localtime( & t );
 
     char date_buffer [80];
     char filename_buffer [80];
+    char time_buffer [80];
     strftime (date_buffer,80,date_pattern.c_str(),now);
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
+    strftime (time_buffer,80,time_pattern.c_str(),now);
     std::ofstream myfile;
 
     cout << endl << "Сохранение скана для текущей позиции: " << endl << currentPosition << endl;
@@ -161,7 +164,7 @@ void Dialog::barCodeEvent(string barCode)
 
     myfile.close();
 
-    std::cout<<"Шаблон сохранен" << std::endl;
+    std::cout<<"Шаблон обновлен" << std::endl;
 
     pugi::xml_document doc;
     if (not doc.load_file("positions.xml")) {
@@ -187,6 +190,7 @@ void Dialog::barCodeEvent(string barCode)
 
     ui->label_7->setNum(currentPosition.current);
 
+    ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
     cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
 }
 
