@@ -25,7 +25,7 @@
    <string>Начало работы</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: rgb(37, 244, 244);</string>
+   <string notr="true">background-color: rgba(71,213,237,255)</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -83,7 +83,7 @@
      <x>0</x>
      <y>0</y>
      <width>627</width>
-     <height>29</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

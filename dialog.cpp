@@ -96,7 +96,7 @@ void Dialog::barCodeEvent(string barCode)
     cout << endl << "Сохранение скана для текущей позиции: " << endl << currentPosition << endl;
 
     string filename = std::string(filename_buffer) + " " + currentPosition.name;
-    if(currentPosition.current == 0) {
+    if(currentPosition.current == 0 || currentPosition.current == 1500) {
         myfile.open(filename);
         if(not myfile.is_open()) {
             std::cout<<"Ошибка создания файла шаблона"<<std::endl;
