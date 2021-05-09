@@ -6,6 +6,23 @@
 #include "ConsoleSampleEventListener.h"
 #include <map>
 
+/*
+        <position reason_of_cancellation="Розничнная продажа" document_type="Кассовый чек" document_number="PDN" document_date="2019-01-01" document_name="custom" register_number_kkt="kkt_number" price="1000"/>
+ */
+struct CancelPos
+{
+    std::string reason_of_cancellation;
+    std::string document_type;
+    std::string document_number;
+    std::string document_date;
+    std::string document_name;
+    std::string register_number_kkt;
+    int price = 0;
+    std::string inn;
+    int expected;
+    int current;
+    std::string name;
+};
 
 struct Position
 {
@@ -74,7 +91,7 @@ class Dialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit Dialog(WF work_format, QWidget *parent = nullptr);
+    explicit Dialog(WF work_format_, QWidget *parent = nullptr);
     ~Dialog();
 
     void barCodeEvent(std::string barCode);
@@ -89,6 +106,9 @@ private slots:
 private:
     Ui::Dialog *ui;
     std::map<std::string, Position> positions;
+    std::map<std::string, CancelPos> cancelPositions;
     Position currentPosition;
+    CancelPos cancelPos;
     SampleEventListener sel;
+    const WF work_format;
 };
