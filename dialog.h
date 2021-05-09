@@ -64,12 +64,17 @@ namespace Ui {
 class Dialog;
 }
 
+enum WF {
+    vvod,
+    vivod
+};
+
 class Dialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit Dialog(QWidget *parent = nullptr);
+    explicit Dialog(WF work_format, QWidget *parent = nullptr);
     ~Dialog();
 
     void barCodeEvent(std::string barCode);

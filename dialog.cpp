@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QDomDocument>
 #include <fstream>
+#include <regex>
 
 #include <filesystem>
 
@@ -32,7 +33,7 @@ ostream& operator<<( ostream&  out, Position& pos ) {
     return out;
 }
 
-Dialog::Dialog(QWidget *parent) :
+Dialog::Dialog(WF work_format, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
     sel(*this)
@@ -91,20 +92,26 @@ void Dialog::barCodeEvent(string barCode)
     strftime (date_buffer,80,date_pattern.c_str(),now);
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
     strftime (time_buffer,80,time_pattern.c_str(),now);
+
+    fs::create_directories("vvod");
     std::ofstream myfile;
 
     cout << endl << "Сохранение скана для текущей позиции: " << endl << currentPosition << endl;
 
-    string filename = std::string(filename_buffer) + " " + currentPosition.name;
+    string filename = std::string(filename_buffer) + " " + currentPosition.name + ".csv";
     if(currentPosition.current == 0 || currentPosition.current == 1500) {
-        myfile.open(filename);
+        std::filesystem::path cwd = std::filesystem::current_path();
+        cwd /= "vvod";
+        std::filesystem::path filePath = cwd / filename;
+
+        myfile.open(filePath);
         if(not myfile.is_open()) {
             std::cout<<"Ошибка создания файла шаблона"<<std::endl;
             return;
         }
         myfile << "ИНН участника оборота,ИНН производителя,ИНН собственника,Дата производства,Тип производственного заказа,Версия" << endl;
         myfile << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date_buffer << ",Собственное производство,4" << endl;
-        myfile << "КИ,КИТУ,Дата производства,Код ТН,ВЭД,ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
+        myfile << "КИ,КИТУ,Дата производства,Код ТН ВЭД ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
 
         cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
         myfile.close();
@@ -116,13 +123,11 @@ void Dialog::barCodeEvent(string barCode)
 
     using std::filesystem::current_path;
 
-    string path = current_path();
-
     ulong max = 0;
     std::string maxPath = "";
 
     cout << "Шаблоны этой позиции:" << endl;
-    for (const auto & file : directory_iterator(path)) {
+    for (const auto & file : directory_iterator(current_path() / "vvod")) {
         std::string path_curr = file.path();
 
         std::string curName = currentPosition.name;
@@ -152,6 +157,10 @@ void Dialog::barCodeEvent(string barCode)
         std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
         return;
     }
+
+    barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
+    barCode.insert(0, 1, '"');
+    barCode.push_back('"');
 
     myfile << barCode << ","
            << ","
