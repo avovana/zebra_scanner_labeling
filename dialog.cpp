@@ -59,6 +59,8 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
 
     cout << "work_format: " << work_format << endl;
 
+    comport_listener = std::thread(&Dialog::listen_comport, this);
+
     pugi::xml_document doc;
     if (!doc.load_file("positions.xml")) {
         cout << "Не удалось загрузить XML документ" << endl;
@@ -131,10 +133,57 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
 
 }
 
+void Dialog::listen_comport() {
+    while(not stop_listen_comport) {
+
+        std::string time_pattern = std::string("%H:%M:%S");
+        time_t t = time(0);
+        struct tm * now = localtime( & t );
+
+        char time_buffer [80];
+        strftime (time_buffer,80,time_pattern.c_str(),now);
+
+        auto t_end = std::chrono::high_resolution_clock::now();
+
+        double elapsed_time_ms = std::chrono::duration<double, std::milli>(t_end-last_scan_time).count();
+        if(elapsed_time_ms > 1000) {
+            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 За последнюю секунду не было скана!</p>").arg(time_buffer));
+        } else {
+            ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Отсканированный товар прошел!</p>").arg(time_buffer));
+        }
+
+        std::this_thread::sleep_for(1min);
+    }
+}
+
 Dialog::~Dialog()
 {
+    if(comport_listener.joinable()) {
+        stop_listen_comport = true;
+        comport_listener.join();
+    }
+
     sel.Close();
     delete ui;
+}
+
+bool Dialog::codeExists(std::ifstream & myfile, string & barCode) {
+
+    codes.clear();
+    string line;
+    for (int i = 0; std::getline(myfile, line); ++i) {
+        if(i < 3)
+            continue;
+
+        cout << "line: " << line << endl;
+        string code = line.substr(1, line.find(",") - 2);
+
+        cout << "code: " << code << endl;
+
+        codes.insert(code);
+    }
+
+    return codes.count(barCode);
 }
 
 void Dialog::barCodeEvent(string barCode)
@@ -215,6 +264,16 @@ void Dialog::barCodeEvent(string barCode)
         }
 
         cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
+
+        std::ifstream ifs(maxPath);
+        if(codeExists(ifs, barCode)) {
+            ifs.close();
+            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
+            cout << "Дубль скана не сохранен" << endl;
+            return;
+        } else {
+            ifs.close();
+        }
 
         myfile.open (maxPath, std::ios_base::app);
         if(not myfile.is_open()) {
@@ -330,6 +389,16 @@ void Dialog::barCodeEvent(string barCode)
 
         cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
 
+        std::ifstream ifs(maxPath);
+        if(codeExists(ifs, barCode)) {
+            ifs.close();
+            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
+            cout << "Дубль скана не сохранен" << endl;
+            return;
+        } else {
+            ifs.close();
+        }
+
         myfile.open (maxPath, std::ios_base::app);
         if(not myfile.is_open()) {
             std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
@@ -376,6 +445,7 @@ void Dialog::barCodeEvent(string barCode)
         ui->label_7->setNum(cancelPos.current);
 
         ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
+        last_scan_time = std::chrono::high_resolution_clock::now();
         cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
     }
         break;

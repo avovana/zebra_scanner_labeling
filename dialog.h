@@ -5,10 +5,24 @@
 #include <QDomDocument>
 #include "ConsoleSampleEventListener.h"
 #include <map>
+#include <set>
+#include <thread>
 
-/*
-        <position reason_of_cancellation="Розничнная продажа" document_type="Кассовый чек" document_number="PDN" document_date="2019-01-01" document_name="custom" register_number_kkt="kkt_number" price="1000"/>
- */
+class Timer
+{
+public:
+    Timer() : beg_(clock_::now()) {}
+    void reset() { beg_ = clock_::now(); }
+    double elapsed() const {
+        return std::chrono::duration_cast<second_>
+            (clock_::now() - beg_).count(); }
+
+private:
+    typedef std::chrono::high_resolution_clock clock_;
+    typedef std::chrono::duration<double, std::ratio<1> > second_;
+    std::chrono::time_point<clock_> beg_;
+};
+
 struct CancelPos
 {
     std::string reason_of_cancellation;
@@ -98,6 +112,8 @@ public:
 
     QString get_decode_data(std::string outXml);
     std::vector<std::string> stringTokernize(std::string inStr, char cDelim);
+    bool codeExists(ifstream &myfile, string &barCode);
+    void listen_comport();
 private slots:
     void on_comboBox_currentTextChanged(const QString &arg1);
 
@@ -105,10 +121,15 @@ private slots:
 
 private:
     Ui::Dialog *ui;
+    std::set<std::string> codes;
     std::map<std::string, Position> positions;
     std::map<std::string, CancelPos> cancelPositions;
     Position currentPosition;
     CancelPos cancelPos;
     SampleEventListener sel;
     const WF work_format;
+    std::chrono::time_point<std::chrono::high_resolution_clock> last_scan_time;
+    std::thread comport_listener;
+    bool stop_listen_comport = false;
+    Timer timer;
 };
