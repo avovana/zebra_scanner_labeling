@@ -80,7 +80,7 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
 
-            Position position = Position(position_xml.attribute("code_tn_ved").as_string(),
+            Position position = Position{position_xml.attribute("code_tn_ved").as_string(),
                                          position_xml.attribute("document_type").as_string(),
                                          position_xml.attribute("document_number").as_string(),
                                          position_xml.attribute("document_date").as_string(),
@@ -88,7 +88,7 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
                                          position_xml.attribute("expected").as_int(),
                                          position_xml.attribute("current").as_int(),
                                          position_name,
-                                         inn_xml.text().get());
+                                         inn_xml.text().get()};
 
             cout << "Считана позиция: " << endl << position << endl;
             positions.insert({position_name, position});
