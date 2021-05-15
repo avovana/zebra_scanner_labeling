@@ -11,7 +11,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt5 COMPONENTS Widgets Xml REQUIRED)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+find_package(Qt5 COMPONENTS Widgets Xml SerialPort Core REQUIRED)
 
 set(SOURCE_FILES
     src/ConsoleMain.cpp
@@ -33,6 +34,8 @@ add_executable(${PROJECT_NAME}
     dialog.h
     dialog.ui
     pugixml.cpp
+    comport.cpp
+    comport.h
 
     ${SOURCE_FILES}
 )
@@ -40,6 +43,8 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt5::Widgets
     Qt5::Xml
+    Qt5::SerialPort
+    Qt5::Core
     -L/usr/lib/zebra-scanner/corescanner
     ${LIBS}
 )
