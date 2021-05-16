@@ -42,21 +42,7 @@ struct CancelPos
     std::string name;
 };
 
-ostream& operator<<( ostream&  out, CancelPos& pos ) {
-    out << pos.reason_of_cancellation << " " << endl
-        << pos.document_type << " " << endl
-        << pos.document_number << " " << endl
-        << pos.document_date << " " << endl
-        << pos.document_name << " " << endl
-        << pos.register_number_kkt << " " << endl
-        << pos.price << " " << endl
-        << pos.inn << endl
-        << pos.expected << " " << endl
-        << pos.current << " " << endl
-        << pos.name  << " " << endl;
-
-    return out;
-}
+ostream& operator<<( ostream&  out, CancelPos& pos );
 
 struct Position
 {
@@ -74,34 +60,30 @@ struct Position
 };
 
 class Pos {
+public:
     virtual std::string mode() = 0;
     virtual std::string to_string() = 0;
-    virtual std::string name() = 0;
+    virtual const std::string & name() = 0;
     virtual int& current() = 0;
+    virtual int expected() = 0;
     virtual void write_header(std::ofstream &) = 0;
     virtual void write_scan(const std::string &path, const std::string &code) = 0;
     virtual void update_xml(const std::string &) = 0;
     virtual std::vector<std::string> add_positions(const pugi::xml_document &) = 0;
+    virtual bool set_current_position_if_exists(const std::string &) = 0;
 };
 
 
-ostream& operator<<( ostream&  out, Position& pos ) {
-    out << pos.code_tn_ved << " " << endl
-        << pos.document_type << " " << endl
-        << pos.document_number << " " << endl
-        << pos.document_date << " " << endl
-        << pos.vsd << " " << endl
-        << pos.expected << " " << endl
-        << pos.current << " " << endl
-        << pos.name  << " " << endl
-        << pos.inn << endl;
+ostream& operator<<( ostream&  out, Position& pos );
 
-    return out;
-}
-
-class InputPos : Pos {
+class InputPos : public Pos {
+public:
     std::string mode() override {
         return "input";
+    }
+
+    const std::string & name() override {
+        return currentPosition.name;
     }
 
     virtual std::string to_string() override {
@@ -112,6 +94,10 @@ class InputPos : Pos {
 
     int& current() override {
         return currentPosition.current;
+    }
+
+    int expected() override {
+        return currentPosition.expected;
     }
 
     void write_header(std::ofstream & os) override {
@@ -127,7 +113,15 @@ class InputPos : Pos {
         os << "КИ,КИТУ,Дата производства,Код ТН ВЭД ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
     }
 
-    void write_scan(const std::string &path, const std::string &code) override {
+    void write_scan(const std::string &path, const std::string &bar_code) override {
+        std::ofstream myfile;
+
+        myfile.open (path, std::ios_base::app);
+        if(not myfile.is_open()) {
+            std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
+            return;
+        }
+
         std::string date_pattern = std::string("%Y-%m-%d");
         char date_buffer [80];
 
@@ -135,7 +129,8 @@ class InputPos : Pos {
         struct tm * now = localtime( & t );
         strftime (date_buffer,80,date_pattern.c_str(),now);
 
-        os << ","
+        myfile << bar_code << ","
+           << ","
            << date_buffer << ","
            << currentPosition.code_tn_ved << ","
            << currentPosition.document_type << ","
@@ -144,17 +139,19 @@ class InputPos : Pos {
            << currentPosition.vsd << endl;
 
         std::cout<<"Шаблон обновлен" << std::endl;
+
+        myfile.close();
     }
 
     void update_xml(const std::string &xml_path) override {
         pugi::xml_document doc;
 
-        if (not doc.load_file(xml_path)) {
+        if (not doc.load_file(xml_path.c_str())) {
             cout << "Не удалось загрузить XML документ" << endl;
             return;
         }
 
-        pugi::xml_node positions_xml = doc.child("resources").child("positions");
+        pugi::xml_node positions_xml = doc.child("resources").child(mode().c_str());
 
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
@@ -202,11 +199,25 @@ class InputPos : Pos {
         return names;
     }
 
+    bool set_current_position_if_exists(const std::string &name) override {
+        auto it = positions.find(name);
+        if(it != positions.end()) {
+            currentPosition = it->second;
+            cout << "Текущая позиция: " << endl << currentPosition << endl;
+            return true;
+        } else {
+            cout << "Не найдено соответствие" << endl;
+            return false;
+        }
+    }
+
+private:
     std::map<std::string, Position> positions;
     Position currentPosition;
 };
 
-class OutputPos : Pos {
+class OutputPos : public Pos {
+public:
     std::string mode() override {
         return "output";
     }
@@ -217,8 +228,78 @@ class OutputPos : Pos {
         return ss.str();
     }
 
+    const std::string & name() override {
+        return cancelPos.name;
+    }
+
     int& current() override {
         return cancelPos.current;
+    }
+
+    int expected() override {
+        return cancelPos.expected;
+    }
+
+    void write_header(std::ofstream & os) override {
+            std::string date_pattern = std::string("%Y-%m-%d");
+            char date_buffer [80];
+
+            time_t t = time(0);
+            struct tm * now = localtime( & t );
+            strftime (date_buffer,80,date_pattern.c_str(),now);
+
+            os << "ИНН участника оборота,Причина вывода из оборота,Дата вывода из оборота,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа,Регистрационный номер ККТ,Версия" << endl;
+            os << cancelPos.inn << "," << cancelPos.reason_of_cancellation << "," << date_buffer << "," << cancelPos.document_type << "," << cancelPos.document_number << "," << cancelPos.document_date << "," << cancelPos.document_name << "," << cancelPos.register_number_kkt << ",4" << endl;
+            os << "КИ,Цена за единицу,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа" << endl;
+
+        }
+
+    void write_scan(const std::string &path, const std::string &bar_code) override {
+        std::ofstream myfile;
+
+        myfile.open (path, std::ios_base::app);
+        if(not myfile.is_open()) {
+            std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
+            return;
+        }
+
+        std::string date_pattern = std::string("%Y-%m-%d");
+        char date_buffer [80];
+
+        time_t t = time(0);
+        struct tm * now = localtime( & t );
+        strftime (date_buffer,80,date_pattern.c_str(),now);
+
+        myfile << bar_code << ","
+               << cancelPos.price << ","
+               << cancelPos.document_type << ","
+               << cancelPos.document_number << ","
+               << cancelPos.document_date << ","
+               << cancelPos.document_name << endl;
+
+        std::cout<<"Шаблон обновлен" << std::endl;
+
+        myfile.close();
+    }
+
+    void update_xml(const std::string &xml_path) override {
+        pugi::xml_document doc;
+
+        if (not doc.load_file(xml_path.c_str())) {
+            cout << "Не удалось загрузить XML документ" << endl;
+            return;
+        }
+
+        pugi::xml_node positions_xml = doc.child("resources").child(mode().c_str());
+
+        for (pugi::xml_node position_xml: positions_xml.children("position")) {
+            std::string position_name = position_xml.attribute("name").as_string();
+            if(position_name == cancelPos.name) {
+                ++cancelPos.current;
+                positions[cancelPos.name].current++;
+                position_xml.attribute("current").set_value(cancelPos.current);
+            }
+        }
     }
 
     std::vector<std::string> add_positions(const pugi::xml_document &doc) override {
@@ -259,6 +340,19 @@ class OutputPos : Pos {
         return names;
     }
 
+    bool set_current_position_if_exists(const std::string &name) override {
+        auto it = positions.find(name);
+        if(it != positions.end()) {
+            cancelPos = it->second;
+            cout << "Текущая позиция: " << endl << cancelPos << endl;
+            return true;
+        } else {
+            cout << "Не найдено соответствие" << endl;
+            return false;
+        }
+    }
+
+private:
     std::map<std::string, CancelPos> positions;
     CancelPos cancelPos;
 };

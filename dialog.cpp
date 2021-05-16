@@ -19,6 +19,37 @@
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
 
+
+ostream& operator<<( ostream&  out, Position& pos ) {
+    out << pos.code_tn_ved << " " << endl
+        << pos.document_type << " " << endl
+        << pos.document_number << " " << endl
+        << pos.document_date << " " << endl
+        << pos.vsd << " " << endl
+        << pos.expected << " " << endl
+        << pos.current << " " << endl
+        << pos.name  << " " << endl
+        << pos.inn << endl;
+
+    return out;
+}
+
+ostream& operator<<( ostream&  out, CancelPos& pos ) {
+    out << pos.reason_of_cancellation << " " << endl
+        << pos.document_type << " " << endl
+        << pos.document_number << " " << endl
+        << pos.document_date << " " << endl
+        << pos.document_name << " " << endl
+        << pos.register_number_kkt << " " << endl
+        << pos.price << " " << endl
+        << pos.inn << endl
+        << pos.expected << " " << endl
+        << pos.current << " " << endl
+        << pos.name  << " " << endl;
+
+    return out;
+}
+
 Dialog::Dialog(WF work_format_, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
@@ -47,6 +78,8 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
     if (!doc.load_file("positions.xml")) {
         cout << "Не удалось загрузить XML документ" << endl;
         return;
+    } else {
+        cout << "Удалось загрузить XML документ" << endl;
     }
 
     auto names = pos_handler->add_positions(doc);
@@ -147,297 +180,109 @@ bool Dialog::codeExists(std::ifstream & myfile, string & barCode) {
 
 void Dialog::barCodeEvent(string barCode)
 {
-    std::string date_pattern = std::string("%Y-%m-%d");
     std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
     std::string time_pattern = std::string("%H:%M:%S");
 
     time_t t = time(0);
     struct tm * now = localtime( & t );
 
-    char date_buffer [80];
     char filename_buffer [80];
     char time_buffer [80];
-    strftime (date_buffer,80,date_pattern.c_str(),now);
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
     strftime (time_buffer,80,time_pattern.c_str(),now);
 
-    switch (work_format) {
-    case vvod:
-    {
-        fs::create_directories(pos_handler->mode()); // don't need to always create
+    fs::create_directories(pos_handler->mode()); // don't need to always create
 
-        std::ofstream myfile;
+    std::ofstream myfile;
 
-        cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
+    cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
 
-        string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
-        if(pos_handler->current() == 0 || pos_handler->current() == 1500) {
-            std::filesystem::path cwd = std::filesystem::current_path();
-            cwd /= pos_handler->mode();
-            std::filesystem::path filePath = cwd / filename;
+    string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
+    if(pos_handler->current() == 0 || pos_handler->current() == 1500) {
+        std::filesystem::path cwd = std::filesystem::current_path();
+        cwd /= pos_handler->mode();
+        std::filesystem::path filePath = cwd / filename;
 
-            myfile.open(filePath);
-            if(not myfile.is_open()) {
-                std::cout<<"Ошибка создания файла шаблона"<<std::endl;
-                return;
-            }
-
-            pos_handler->write_header(myfile);
-
-            cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
-            myfile.close();
-        }
-
-
-        using std::cout; using std::cin;
-        using std::endl; using std::string;
-        using std::filesystem::directory_iterator;
-
-        using std::filesystem::current_path;
-
-        ulong max = 0;
-        std::string maxPath = "";
-
-        cout << "Шаблоны этой позиции:" << endl;
-        for (const auto & file : directory_iterator(current_path() / pos_handler->mode())) {
-            std::string path_curr = file.path();
-
-            std::string curName = pos_handler->name();
-
-            std::size_t found = path_curr.find(curName);
-            if (found == std::string::npos)
-                continue;
-
-            auto filename = file.path();
-            struct stat result;
-            if(stat(filename.c_str(), &result)==0)
-            {
-                auto mod_time = result.st_mtime;
-                cout << path_curr << endl;
-
-                if(mod_time > max) {
-                    max = mod_time;
-                    maxPath = path_curr;
-                }
-            }
-        }
-
-        cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
-
-        std::ifstream ifs(maxPath);
-        if(codeExists(ifs, barCode)) {
-            ifs.close();
-            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
-            cout << "Дубль скана не сохранен" << endl;
-            last_scan_time = std::chrono::high_resolution_clock::now();
-            timer.reset();
-            return;
-        } else {
-            ifs.close();
-        }
-
-        myfile.open (maxPath, std::ios_base::app);
+        myfile.open(filePath);
         if(not myfile.is_open()) {
-            std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
+            std::cout<<"Ошибка создания файла шаблона"<<std::endl;
             return;
         }
 
-        barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
-        barCode.insert(0, 1, '"');
-        barCode.push_back('"');
+        pos_handler->write_header(myfile);
 
-        myfile << barCode << ",";
-        pos_handler->write_scan(myfile);
-
+        cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
         myfile.close();
+    }
 
-        std::cout<<"Шаблон обновлен" << std::endl;
 
-        pugi::xml_document doc;
-        if (not doc.load_file("positions.xml")) {
-            cout << "Не удалось загрузить XML документ" << endl;
-            return;
+    using std::cout; using std::cin;
+    using std::endl; using std::string;
+    using std::filesystem::directory_iterator;
+
+    using std::filesystem::current_path;
+
+    ulong max = 0;
+    std::string maxPath = "";
+
+    cout << "Шаблоны этой позиции:" << endl;
+    for (const auto & file : directory_iterator(current_path() / pos_handler->mode())) {
+        std::string path_curr = file.path();
+
+        std::string curName = pos_handler->name();
+
+        std::size_t found = path_curr.find(curName);
+        if (found == std::string::npos)
+            continue;
+
+        auto filename = file.path();
+        struct stat result;
+        if(stat(filename.c_str(), &result)==0)
+        {
+            auto mod_time = result.st_mtime;
+            cout << path_curr << endl;
+
+            if(mod_time > max) {
+                max = mod_time;
+                maxPath = path_curr;
+            }
         }
+    }
 
-        pos_handler->write_scan(doc);
+    cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
 
-        if(not doc.save_file("positions.xml")) {
-            cout << "Не удалось сохранить XML документ" << endl;
-            return;
-        }
-
-        ui->label_7->setNum(currentPosition.current);
-
-        ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
+    std::ifstream ifs(maxPath);
+    if(codeExists(ifs, barCode)) {
+        ifs.close();
+        ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
+        cout << "Дубль скана не сохранен" << endl;
         last_scan_time = std::chrono::high_resolution_clock::now();
         timer.reset();
-        cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
+        return;
+    } else {
+        ifs.close();
     }
-        break;
 
-    case vivod:
-    {
-        fs::create_directories("vivod");
-        std::ofstream myfile;
+    barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
+    barCode.insert(0, 1, '"');
+    barCode.push_back('"');
 
-        cout << endl << "Сохранение скана для текущей позиции: " << endl << cancelPos << endl;
+    pos_handler->write_scan(maxPath, barCode);
+    pos_handler->update_xml("positions.xml");
 
-        string filename = std::string(filename_buffer) + " " + cancelPos.name + ".csv";
-        if(cancelPos.current == 0 || cancelPos.current == 1500) {
-            std::filesystem::path cwd = std::filesystem::current_path();
-            cwd /= "vivod";
-            std::filesystem::path filePath = cwd / filename;
+    ui->label_7->setNum(pos_handler->current());
 
-            myfile.open(filePath);
-            if(not myfile.is_open()) {
-                std::cout<<"Ошибка создания файла шаблона"<<std::endl;
-                return;
-            }
-            myfile << "ИНН участника оборота,Причина вывода из оборота,Дата вывода из оборота,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа,Регистрационный номер ККТ,Версия" << endl;
-            myfile << cancelPos.inn << "," << cancelPos.reason_of_cancellation << "," << date_buffer << "," << cancelPos.document_type << "," << cancelPos.document_number << "," << cancelPos.document_date << "," << cancelPos.document_name << "," << cancelPos.register_number_kkt << ",4" << endl;
-            myfile << "КИ,Цена за единицу,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа" << endl;
-
-            cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
-            myfile.close();
-        }
-
-
-        using std::cout; using std::cin;
-        using std::endl; using std::string;
-        using std::filesystem::directory_iterator;
-
-        using std::filesystem::current_path;
-
-        ulong max = 0;
-        std::string maxPath = "";
-
-        cout << "Шаблоны этой позиции:" << endl;
-        for (const auto & file : directory_iterator(current_path() / "vivod")) {
-            std::string path_curr = file.path();
-
-            std::string curName = cancelPos.name;
-
-            std::size_t found = path_curr.find(curName);
-            if (found == std::string::npos)
-                continue;
-
-            auto filename = file.path();
-            struct stat result;
-            if(stat(filename.c_str(), &result)==0)
-            {
-                auto mod_time = result.st_mtime;
-                cout << path_curr << endl;
-
-                if(mod_time > max) {
-                    max = mod_time;
-                    maxPath = path_curr;
-                }
-            }
-        }
-
-        cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
-
-        std::ifstream ifs(maxPath);
-        if(codeExists(ifs, barCode)) {
-            ifs.close();
-            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
-            cout << "Дубль скана не сохранен" << endl;
-            last_scan_time = std::chrono::high_resolution_clock::now();
-            timer.reset();
-            return;
-        } else {
-            ifs.close();
-        }
-
-        myfile.open (maxPath, std::ios_base::app);
-        if(not myfile.is_open()) {
-            std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
-            return;
-        }
-
-        barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
-        barCode.insert(0, 1, '"');
-        barCode.push_back('"');
-
-        myfile << barCode << ","
-               << cancelPos.price << ","
-               << cancelPos.document_type << ","
-               << cancelPos.document_number << ","
-               << cancelPos.document_date << ","
-               << cancelPos.document_name << endl;
-
-        myfile.close();
-
-        std::cout<<"Шаблон обновлен" << std::endl;
-
-        pugi::xml_document doc;
-        if (not doc.load_file("positions.xml")) {
-            cout << "Не удалось загрузить XML документ" << endl;
-            return;
-        }
-
-        pugi::xml_node positions_xml = doc.child("resources").child("cancellations");
-
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string position_name = position_xml.attribute("name").as_string();
-            if(position_name == cancelPos.name) {
-                ++cancelPos.current;
-                cancelPositions[cancelPos.name].current++;
-                position_xml.attribute("current").set_value(cancelPos.current);
-            }
-        }
-
-        if(not doc.save_file("positions.xml")) {
-            cout << "Не удалось сохранить XML документ" << endl;
-            return;
-        }
-
-        ui->label_7->setNum(cancelPos.current);
-
-        ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
-        last_scan_time = std::chrono::high_resolution_clock::now();
-        timer.reset();
-        cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
-    }
-        break;
-    default:
-        break;
-    }
+    ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
+    last_scan_time = std::chrono::high_resolution_clock::now();
+    timer.reset();
+    cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
 }
 
 void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
 {
-    switch (work_format) {
-    case vvod:
-    {
-        auto it = positions.find(arg1.toUtf8().constData());
-        if(it != positions.end()) {
-            currentPosition = it->second;
-            ui->label_6->setNum(currentPosition.expected);
-            ui->label_7->setNum(currentPosition.current);
-            cout << "Текущая позиция: " << endl << currentPosition << endl;
-        } else {
-            cout << "Не найдено соответствие" << endl;
-        }
-    }
-
-        break;
-
-    case vivod:
-    {
-        auto it = cancelPositions.find(arg1.toUtf8().constData());
-        if(it != cancelPositions.end()) {
-            cancelPos = it->second;
-            ui->label_6->setNum(cancelPos.expected);
-            ui->label_7->setNum(cancelPos.current);
-            cout << "Текущая позиция: " << endl << cancelPos << endl;
-        } else {
-            cout << "Не найдено соответствие" << endl;
-        }
-    }
-        break;
-    default:
-        break;
+    if(pos_handler->set_current_position_if_exists(arg1.toUtf8().constData())) {
+        ui->label_6->setNum(pos_handler->expected());
+        ui->label_7->setNum(pos_handler->current());
     }
 }
 
