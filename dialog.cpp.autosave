@@ -251,20 +251,11 @@ void Dialog::barCodeEvent(string barCode)
 
         myfile.close();
 
-        std::cout<<"Шаблон обновлен" << std::endl;
+        
+        
+        string xml_path = "positions.xml";
 
-        pugi::xml_document doc;
-        if (not doc.load_file("positions.xml")) {
-            cout << "Не удалось загрузить XML документ" << endl;
-            return;
-        }
-
-        pos_handler->write_scan(doc);
-
-        if(not doc.save_file("positions.xml")) {
-            cout << "Не удалось сохранить XML документ" << endl;
-            return;
-        }
+        pos_handler->write_scan(xml_path);
 
         ui->label_7->setNum(currentPosition.current);
 

@@ -8,6 +8,7 @@
 #include <set>
 #include <thread>
 #include <memory>
+#include <fstream>
 
 #include "pugixml.hpp"
 
@@ -78,7 +79,8 @@ class Pos {
     virtual std::string name() = 0;
     virtual int& current() = 0;
     virtual void write_header(std::ofstream &) = 0;
-    virtual std::string description() = 0;
+    virtual void write_scan(const std::string &path, const std::string &code) = 0;
+    virtual void update_xml(const std::string &) = 0;
     virtual std::vector<std::string> add_positions(const pugi::xml_document &) = 0;
 };
 
@@ -113,9 +115,55 @@ class InputPos : Pos {
     }
 
     void write_header(std::ofstream & os) override {
+        std::string date_pattern = std::string("%Y-%m-%d");
+        char date_buffer [80];
+
+        time_t t = time(0);
+        struct tm * now = localtime( & t );
+        strftime (date_buffer,80,date_pattern.c_str(),now);
+
         os << "ИНН участника оборота,ИНН производителя,ИНН собственника,Дата производства,Тип производственного заказа,Версия" << endl;
         os << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date_buffer << ",Собственное производство,4" << endl;
         os << "КИ,КИТУ,Дата производства,Код ТН ВЭД ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
+    }
+
+    void write_scan(const std::string &path, const std::string &code) override {
+        std::string date_pattern = std::string("%Y-%m-%d");
+        char date_buffer [80];
+
+        time_t t = time(0);
+        struct tm * now = localtime( & t );
+        strftime (date_buffer,80,date_pattern.c_str(),now);
+
+        os << ","
+           << date_buffer << ","
+           << currentPosition.code_tn_ved << ","
+           << currentPosition.document_type << ","
+           << currentPosition.document_number << ","
+           << currentPosition.document_date << ","
+           << currentPosition.vsd << endl;
+
+        std::cout<<"Шаблон обновлен" << std::endl;
+    }
+
+    void update_xml(const std::string &xml_path) override {
+        pugi::xml_document doc;
+
+        if (not doc.load_file(xml_path)) {
+            cout << "Не удалось загрузить XML документ" << endl;
+            return;
+        }
+
+        pugi::xml_node positions_xml = doc.child("resources").child("positions");
+
+        for (pugi::xml_node position_xml: positions_xml.children("position")) {
+            std::string position_name = position_xml.attribute("name").as_string();
+            if(position_name == currentPosition.name) {
+                ++currentPosition.current;
+                positions[currentPosition.name].current++;
+                position_xml.attribute("current").set_value(currentPosition.current);
+            }
+        }
     }
 
     std::vector<std::string> add_positions(const pugi::xml_document &doc) override {
