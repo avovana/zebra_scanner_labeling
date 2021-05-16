@@ -16,40 +16,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "pugixml.hpp"
-
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
-
-ostream& operator<<( ostream&  out, Position& pos ) {
-    out << pos.code_tn_ved << " " << endl
-        << pos.document_type << " " << endl
-        << pos.document_number << " " << endl
-        << pos.document_date << " " << endl
-        << pos.vsd << " " << endl
-        << pos.expected << " " << endl
-        << pos.current << " " << endl
-        << pos.name  << " " << endl
-        << pos.inn << endl;
-
-    return out;
-}
-
-ostream& operator<<( ostream&  out, CancelPos& pos ) {
-    out << pos.reason_of_cancellation << " " << endl
-        << pos.document_type << " " << endl
-        << pos.document_number << " " << endl
-        << pos.document_date << " " << endl
-        << pos.document_name << " " << endl
-        << pos.register_number_kkt << " " << endl
-        << pos.price << " " << endl
-        << pos.inn << endl
-        << pos.expected << " " << endl
-        << pos.current << " " << endl
-        << pos.name  << " " << endl;
-
-    return out;
-}
 
 Dialog::Dialog(WF work_format_, QWidget *parent) :
     QDialog(parent),
@@ -61,6 +29,18 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
 
     cout << "work_format: " << work_format << endl;
 
+    switch (work_format) {
+    case vvod:
+        pos_handler.reset(new InputPos());
+        break;
+    case vivod:
+        pos_handler.reset(new OutputPos());
+        break;
+    default:
+        cout << "bad work_format: " << work_format << endl;
+        return;
+    }
+
     comport_listener = std::thread(&Dialog::listen_comport, this);
 
     pugi::xml_document doc;
@@ -69,70 +49,17 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
         return;
     }
 
-    pugi::xml_node inn_xml = doc.child("resources").child("inn");
-    pugi::xml_node version = doc.child("resources").child("version");
+    auto names = pos_handler->add_positions(doc);
+    if(names.empty())
+        return;
 
-    switch (work_format) {
-    case vvod:
-    {
-        pugi::xml_node positions_xml = doc.child("resources").child("positions");
+    QStringList qnames;
+    qnames.reserve(names.size());
 
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string position_name = position_xml.attribute("name").as_string();
+    for(auto const& name: names)
+         qnames.push_back(QString::fromStdString(name));
 
-            Position position = Position{position_xml.attribute("code_tn_ved").as_string(),
-                                         position_xml.attribute("document_type").as_string(),
-                                         position_xml.attribute("document_number").as_string(),
-                                         position_xml.attribute("document_date").as_string(),
-                                         position_xml.attribute("vsd").as_string(),
-                                         position_xml.attribute("expected").as_int(),
-                                         position_xml.attribute("current").as_int(),
-                                         position_name,
-                                         inn_xml.text().get()};
-
-            cout << "Считана позиция: " << endl << position << endl;
-            positions.insert({position_name, position});
-            ui->comboBox->addItem(QString::fromStdString(position_name));
-        }
-
-        if(positions.empty())
-            cout << "Ошибка! Позиции не считаны!" << endl;
-    }
-        break;
-
-    case vivod:
-    {
-        cout << "here" << endl;
-        pugi::xml_node positions_xml = doc.child("resources").child("cancellations");
-
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string position_name = position_xml.attribute("name").as_string();
-
-            CancelPos cancelPos = CancelPos{position_xml.attribute("reason_of_cancellation").as_string(),
-                                  position_xml.attribute("document_type").as_string(),
-                                  position_xml.attribute("document_number").as_string(),
-                                  position_xml.attribute("document_date").as_string(),
-                                  position_xml.attribute("document_name").as_string(),
-                                  position_xml.attribute("register_number_kkt").as_string(),
-                                  position_xml.attribute("price").as_int(),
-                                  inn_xml.text().get(),
-                                  position_xml.attribute("expected").as_int(),
-                                  position_xml.attribute("current").as_int(),
-                                  position_name};
-
-            cout << "Считана позиция: " << endl << cancelPos << endl;
-            cancelPositions.insert({position_name, cancelPos});
-            ui->comboBox->addItem(QString::fromStdString(position_name));
-        }
-
-        if(cancelPositions.empty())
-            cout << "Ошибка! Позиции не считаны!" << endl;
-    }
-        break;
-    default:
-        break;
-    }
-
+    ui->comboBox->addItems(qnames);
 }
 
 void Dialog::listen_comport() {
@@ -237,15 +164,16 @@ void Dialog::barCodeEvent(string barCode)
     switch (work_format) {
     case vvod:
     {
-        fs::create_directories("vvod");
+        fs::create_directories(pos_handler->mode()); // don't need to always create
+
         std::ofstream myfile;
 
-        cout << endl << "Сохранение скана для текущей позиции: " << endl << currentPosition << endl;
+        cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
 
-        string filename = std::string(filename_buffer) + " " + currentPosition.name + ".csv";
-        if(currentPosition.current == 0 || currentPosition.current == 1500) {
+        string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
+        if(pos_handler->current() == 0 || pos_handler->current() == 1500) {
             std::filesystem::path cwd = std::filesystem::current_path();
-            cwd /= "vvod";
+            cwd /= pos_handler->mode();
             std::filesystem::path filePath = cwd / filename;
 
             myfile.open(filePath);
@@ -253,9 +181,8 @@ void Dialog::barCodeEvent(string barCode)
                 std::cout<<"Ошибка создания файла шаблона"<<std::endl;
                 return;
             }
-            myfile << "ИНН участника оборота,ИНН производителя,ИНН собственника,Дата производства,Тип производственного заказа,Версия" << endl;
-            myfile << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date_buffer << ",Собственное производство,4" << endl;
-            myfile << "КИ,КИТУ,Дата производства,Код ТН ВЭД ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
+
+            pos_handler->write_header(myfile);
 
             cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
             myfile.close();
@@ -272,10 +199,10 @@ void Dialog::barCodeEvent(string barCode)
         std::string maxPath = "";
 
         cout << "Шаблоны этой позиции:" << endl;
-        for (const auto & file : directory_iterator(current_path() / "vvod")) {
+        for (const auto & file : directory_iterator(current_path() / pos_handler->mode())) {
             std::string path_curr = file.path();
 
-            std::string curName = currentPosition.name;
+            std::string curName = pos_handler->name();
 
             std::size_t found = path_curr.find(curName);
             if (found == std::string::npos)
