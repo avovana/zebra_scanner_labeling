@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<resources>
+	<inn>1111111111</inn>
+	<version>4</version>
+	<input>
+		<position code_tn_ved="0406909909" document_type="Декларация соответствия ЕАЭС N RU Д-RU.АЮ02.В01759/20" document_number="123" document_date="2019-01-01" current="777" expected="240" vsd="9CDA-5D57-FAEA-46DD-B94D-3DCC-AC70-1091" name="сыр Кавказский" />
+		<position code_tn_ved="0406909908" document_type="Декларация соответствия ЕАЭС N RU Д-RU.АЮ02.В01759/21" document_number="1234" document_date="2019-01-01" current="111" expected="241" vsd="9CDA-5D57-FAEA-46DD-B94D-3DCC-AC70-1092" name="молоко Буренка" />
+	</input>
+	<output>
+		<position reason_of_cancellation="Розничнная продажа" document_type="Кассовый чек" document_number="PDN" document_date="2019-01-01" document_name="custom" register_number_kkt="kkt_number" price="1000" current="555" expected="111" name="молоко Буренка" />
+	</output>
+</resources>
