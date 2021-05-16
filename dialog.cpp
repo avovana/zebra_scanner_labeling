@@ -100,15 +100,15 @@ void Dialog::listen_comport() {
 
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
 
-    const QString serialPortName = serialPortInfos.at(0).portName();
-    cout << "Comport. Prot name: " << serialPortName.toUtf8().constData() << endl;
+    const QString serialPortName = serialPortInfos.at(1).portName();
+    cout << "Comport. Port name: " << serialPortName.toUtf8().constData() << endl;
     serialPort.setPortName(serialPortName);
     serialPort.setBaudRate(57600);
     if (!serialPort.open(QIODevice::ReadOnly)) {
-        cout << "Comport. FAIL open com port: " << serialPortName.toUtf8().constData() << " serialPort.error(): " << serialPort.error() << endl;
+        cout << "Comport. FAIL open: " << serialPortName.toUtf8().constData() << " serialPort.error(): " << serialPort.error() << endl;
         return;
     } else {
-        cout << "Comport. SUCCESS open com port" << endl;
+        cout << "Comport. SUCCESS open" << endl;
     }
 
     while(not stop_listen_comport) {
@@ -120,7 +120,7 @@ void Dialog::listen_comport() {
             cout << "Comport. Read error: " << serialPort.errorString().toUtf8().constData() << endl;
             continue;
         } else if (serialPort.error() == QSerialPort::TimeoutError && readData.isEmpty()) {
-            //cout << "Comport. No data in comport for 10sec" << endl;
+            //cout << "Comport. No data in comport for 1sec" << endl;
             continue;
         }
         cout << "Comport. Data received: " << QString(readData).toUtf8().constData() << endl;
@@ -132,19 +132,13 @@ void Dialog::listen_comport() {
         char time_buffer [80];
         strftime (time_buffer,80,time_pattern.c_str(),now);
 
-        auto t_end = std::chrono::high_resolution_clock::now();
-
         typedef std::chrono::milliseconds ms;
-        auto elapsed_time_ms = std::chrono::duration_cast<ms>(t_end-last_scan_time).count();
-        cout << "time differece: " << timer.elapsed() << endl;
-        if(timer.elapsed() > 3000) {
-            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 За последнюю 3 секунду не было скана!</p>").arg(time_buffer));
+        cout << "time differece: " << timer.elapsed() << " ms" << endl;
+        if(timer.elapsed() > 1000) {
+            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 За последнюю 1 секунду не было скана!</p>").arg(time_buffer));
         } else {
             ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Отсканированный товар прошел!</p>").arg(time_buffer));
         }
-
-
-        //std::this_thread::sleep_for(1sec);
     }
 }
 
@@ -256,7 +250,6 @@ void Dialog::barCodeEvent(string barCode)
         ifs.close();
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
         cout << "Дубль скана не сохранен" << endl;
-        last_scan_time = std::chrono::high_resolution_clock::now();
         timer.reset();
         return;
     } else {
@@ -273,7 +266,6 @@ void Dialog::barCodeEvent(string barCode)
     ui->label_7->setNum(pos_handler->current());
 
     ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
-    last_scan_time = std::chrono::high_resolution_clock::now();
     timer.reset();
     cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
 }

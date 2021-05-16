@@ -15,16 +15,18 @@
 class Timer
 {
 public:
-    Timer() : beg_(clock_::now()) {}
-    void reset() { beg_ = clock_::now(); }
+    Timer() : time(clock::now()) {
+    }
+    void reset() {
+        time = clock::now();
+    }
     int elapsed() const {
-        return std::chrono::duration_cast<ms>
-            (clock_::now() - beg_).count(); }
+        return std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - time).count();
+    }
 
 private:
-    typedef std::chrono::high_resolution_clock clock_;
-    typedef std::chrono::milliseconds ms;
-    std::chrono::time_point<clock_> beg_;
+    typedef std::chrono::high_resolution_clock clock;
+    std::chrono::time_point<std::chrono::high_resolution_clock> time;
 };
 
 struct CancelPos
