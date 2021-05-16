@@ -100,7 +100,7 @@ void Dialog::listen_comport() {
 
     const auto serialPortInfos = QSerialPortInfo::availablePorts();
 
-    const QString serialPortName = serialPortInfos.at(1).portName();
+    const QString serialPortName = serialPortInfos.at(0).portName();
     cout << "Comport. Port name: " << serialPortName.toUtf8().constData() << endl;
     serialPort.setPortName(serialPortName);
     serialPort.setBaudRate(57600);
@@ -134,11 +134,10 @@ void Dialog::listen_comport() {
 
         typedef std::chrono::milliseconds ms;
         cout << "time differece: " << timer.elapsed() << " ms" << endl;
-        if(timer.elapsed() > 1000) {
+        if(timer.elapsed() > 1000)
             ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 За последнюю 1 секунду не было скана!</p>").arg(time_buffer));
-        } else {
+        else
             ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Отсканированный товар прошел!</p>").arg(time_buffer));
-        }
     }
 }
 

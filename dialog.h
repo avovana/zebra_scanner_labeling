@@ -85,21 +85,21 @@ public:
     }
 
     const std::string & name() override {
-        return currentPosition.name;
+        return positions[current_name].name;
     }
 
     virtual std::string to_string() override {
         std::stringstream ss;
-        ss << currentPosition;
+        ss << positions[current_name];
         return ss.str();
     }
 
     int& current() override {
-        return currentPosition.current;
+        return positions[current_name].current;
     }
 
     int expected() override {
-        return currentPosition.expected;
+        return positions[current_name].expected;
     }
 
     void write_header(std::ofstream & os) override {
@@ -111,7 +111,7 @@ public:
         strftime (date_buffer,80,date_pattern.c_str(),now);
 
         os << "ИНН участника оборота,ИНН производителя,ИНН собственника,Дата производства,Тип производственного заказа,Версия" << endl;
-        os << currentPosition.inn << "," << currentPosition.inn << "," << currentPosition.inn << "," << date_buffer << ",Собственное производство,4" << endl;
+        os << positions[current_name].inn << "," << positions[current_name].inn << "," << positions[current_name].inn << "," << date_buffer << ",Собственное производство,4" << endl;
         os << "КИ,КИТУ,Дата производства,Код ТН ВЭД ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
     }
 
@@ -134,11 +134,11 @@ public:
         myfile << bar_code << ","
            << ","
            << date_buffer << ","
-           << currentPosition.code_tn_ved << ","
-           << currentPosition.document_type << ","
-           << currentPosition.document_number << ","
-           << currentPosition.document_date << ","
-           << currentPosition.vsd << endl;
+           << positions[current_name].code_tn_ved << ","
+           << positions[current_name].document_type << ","
+           << positions[current_name].document_number << ","
+           << positions[current_name].document_date << ","
+           << positions[current_name].vsd << endl;
 
         std::cout<<"Шаблон обновлен" << std::endl;
 
@@ -157,10 +157,9 @@ public:
 
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
-            if(position_name == currentPosition.name) {
-                ++currentPosition.current;
-                positions[currentPosition.name].current++;
-                position_xml.attribute("current").set_value(currentPosition.current);
+            if(position_name == current_name) {
+                ++positions[current_name].current;
+                position_xml.attribute("current").set_value(positions[current_name].current);
             }
         }
     }
@@ -204,8 +203,8 @@ public:
     bool set_current_position_if_exists(const std::string &name) override {
         auto it = positions.find(name);
         if(it != positions.end()) {
-            currentPosition = it->second;
-            cout << "Текущая позиция: " << endl << currentPosition << endl;
+            current_name = name;
+            cout << "Текущая позиция: " << endl << positions[current_name] << endl;
             return true;
         } else {
             cout << "Не найдено соответствие" << endl;
@@ -215,7 +214,7 @@ public:
 
 private:
     std::map<std::string, Position> positions;
-    Position currentPosition;
+    std::string current_name;
 };
 
 class OutputPos : public Pos {
@@ -226,20 +225,20 @@ public:
 
     virtual std::string to_string() override {
         std::stringstream ss;
-        ss << cancelPos;
+        ss << positions[current_name];
         return ss.str();
     }
 
     const std::string & name() override {
-        return cancelPos.name;
+        return positions[current_name].name;
     }
 
     int& current() override {
-        return cancelPos.current;
+        return positions[current_name].current;
     }
 
     int expected() override {
-        return cancelPos.expected;
+        return positions[current_name].expected;
     }
 
     void write_header(std::ofstream & os) override {
@@ -251,7 +250,7 @@ public:
             strftime (date_buffer,80,date_pattern.c_str(),now);
 
             os << "ИНН участника оборота,Причина вывода из оборота,Дата вывода из оборота,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа,Регистрационный номер ККТ,Версия" << endl;
-            os << cancelPos.inn << "," << cancelPos.reason_of_cancellation << "," << date_buffer << "," << cancelPos.document_type << "," << cancelPos.document_number << "," << cancelPos.document_date << "," << cancelPos.document_name << "," << cancelPos.register_number_kkt << ",4" << endl;
+            os << positions[current_name].inn << "," << positions[current_name].reason_of_cancellation << "," << date_buffer << "," << positions[current_name].document_type << "," << positions[current_name].document_number << "," << positions[current_name].document_date << "," << positions[current_name].document_name << "," << positions[current_name].register_number_kkt << ",4" << endl;
             os << "КИ,Цена за единицу,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа" << endl;
 
         }
@@ -273,11 +272,11 @@ public:
         strftime (date_buffer,80,date_pattern.c_str(),now);
 
         myfile << bar_code << ","
-               << cancelPos.price << ","
-               << cancelPos.document_type << ","
-               << cancelPos.document_number << ","
-               << cancelPos.document_date << ","
-               << cancelPos.document_name << endl;
+               << positions[current_name].price << ","
+               << positions[current_name].document_type << ","
+               << positions[current_name].document_number << ","
+               << positions[current_name].document_date << ","
+               << positions[current_name].document_name << endl;
 
         std::cout<<"Шаблон обновлен" << std::endl;
 
@@ -296,10 +295,9 @@ public:
 
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
-            if(position_name == cancelPos.name) {
-                ++cancelPos.current;
-                positions[cancelPos.name].current++;
-                position_xml.attribute("current").set_value(cancelPos.current);
+            if(position_name == current_name) {
+                ++positions[current_name].current;
+                position_xml.attribute("current").set_value(positions[current_name].current);
             }
         }
     }
@@ -345,8 +343,8 @@ public:
     bool set_current_position_if_exists(const std::string &name) override {
         auto it = positions.find(name);
         if(it != positions.end()) {
-            cancelPos = it->second;
-            cout << "Текущая позиция: " << endl << cancelPos << endl;
+            current_name = name;
+            cout << "Текущая позиция: " << endl << positions[current_name] << endl;
             return true;
         } else {
             cout << "Не найдено соответствие" << endl;
@@ -356,7 +354,7 @@ public:
 
 private:
     std::map<std::string, CancelPos> positions;
-    CancelPos cancelPos;
+    std::string current_name;
 };
 
 namespace Ui {
