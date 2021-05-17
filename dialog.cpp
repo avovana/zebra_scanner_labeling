@@ -60,6 +60,10 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
 
     cout << "work_format: " << work_format << endl;
 
+    const auto infos = QSerialPortInfo::availablePorts();
+    for (const QSerialPortInfo &info : infos)
+        ui->comboBox_2->addItem(info.portName());
+
     switch (work_format) {
     case vvod:
         pos_handler.reset(new InputPos());
@@ -71,8 +75,6 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
         cout << "bad work_format: " << work_format << endl;
         return;
     }
-
-    comport_listener = std::thread(&Dialog::listen_comport, this);
 
     pugi::xml_document doc;
     if (!doc.load_file("positions.xml")) {
@@ -98,11 +100,11 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
 void Dialog::listen_comport() {
     QSerialPort serialPort;
 
-    const auto serialPortInfos = QSerialPortInfo::availablePorts();
+    //const auto serialPortInfos = QSerialPortInfo::availablePorts();
+    const QString serialPortName = ui->comboBox_2->currentText();
 
-    const QString serialPortName = serialPortInfos.at(0).portName();
     cout << "Comport. Port name: " << serialPortName.toUtf8().constData() << endl;
-    serialPort.setPortName(serialPortName);
+    serialPort.setPortName(ui->comboBox_2->currentText());
     serialPort.setBaudRate(57600);
     if (!serialPort.open(QIODevice::ReadOnly)) {
         cout << "Comport. FAIL open: " << serialPortName.toUtf8().constData() << " serialPort.error(): " << serialPort.error() << endl;
@@ -279,6 +281,8 @@ void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
 
 void Dialog::on_pushButton_clicked()
 {
+    comport_listener = std::thread(&Dialog::listen_comport, this);
+
     if(STATUS_OK != sel.Open())
         qDebug() << "Corescanner service is not Active.";
 

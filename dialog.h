@@ -151,16 +151,26 @@ public:
         if (not doc.load_file(xml_path.c_str())) {
             cout << "Не удалось загрузить XML документ" << endl;
             return;
+        } else {
+            cout << "Удалось загрузить XML документ" << endl;
         }
 
         pugi::xml_node positions_xml = doc.child("resources").child(mode().c_str());
+        cout << "mode: " << mode().c_str() << endl;
 
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
             if(position_name == current_name) {
                 ++positions[current_name].current;
+                cout << "current name: " << current_name << endl;
+                cout << "current number: " << positions[current_name].current << endl;
                 position_xml.attribute("current").set_value(positions[current_name].current);
             }
+        }
+
+        if(not doc.save_file(xml_path.c_str())) {
+            cout << "Не удалось сохранить XML документ" << endl;
+            return;
         }
     }
 
@@ -299,6 +309,11 @@ public:
                 ++positions[current_name].current;
                 position_xml.attribute("current").set_value(positions[current_name].current);
             }
+        }
+
+        if(not doc.save_file(xml_path.c_str())) {
+            cout << "Не удалось сохранить XML документ" << endl;
+            return;
         }
     }
 
