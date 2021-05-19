@@ -57,6 +57,7 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
     work_format(work_format_)
 {
     ui->setupUi(this);
+    setWindowState(Qt::WindowMaximized);
 
     cout << "work_format: " << work_format << endl;
 
@@ -115,7 +116,7 @@ void Dialog::listen_comport() {
 
     while(not stop_listen_comport) {
         QByteArray readData = serialPort.readAll();
-        while (serialPort.waitForReadyRead(30))
+        while (serialPort.waitForReadyRead(400))
             readData.append(serialPort.readAll());
 
         if (serialPort.error() == QSerialPort::ReadError) {
@@ -137,9 +138,9 @@ void Dialog::listen_comport() {
         typedef std::chrono::milliseconds ms;
         cout << "time differece: " << timer.elapsed() << " ms" << endl;
         if(timer.elapsed() > 1000)
-            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 За последнюю 1 секунду не было скана!</p>").arg(time_buffer));
+            ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Внимание, КМ не считан!</p>").arg(time_buffer));
         else
-            ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Отсканированный товар прошел!</p>").arg(time_buffer));
+            ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Сканирование прошло успешно!</p>").arg(time_buffer));
     }
 }
 
@@ -205,6 +206,7 @@ void Dialog::barCodeEvent(string barCode)
         }
 
         pos_handler->write_header(myfile);
+        fs::copy_file(filePath, "/mnt/hgfs/shared_folder/" + filename);
 
         cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
         myfile.close();
@@ -262,6 +264,7 @@ void Dialog::barCodeEvent(string barCode)
     barCode.push_back('"');
 
     pos_handler->write_scan(maxPath, barCode);
+    ++pos_handler->current();
     pos_handler->update_xml("positions.xml");
 
     ui->label_7->setNum(pos_handler->current());
@@ -274,17 +277,24 @@ void Dialog::barCodeEvent(string barCode)
 void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
 {
     if(pos_handler->set_current_position_if_exists(arg1.toUtf8().constData())) {
-        ui->label_6->setNum(pos_handler->expected());
+        ui->lineEdit->setText(QString::number(pos_handler->expected()));
         ui->label_7->setNum(pos_handler->current());
     }
 }
 
 void Dialog::on_pushButton_clicked()
 {
-    comport_listener = std::thread(&Dialog::listen_comport, this);
+    if(not comport_listener.joinable())
+        comport_listener = std::thread(&Dialog::listen_comport, this);
 
     if(STATUS_OK != sel.Open())
         qDebug() << "Corescanner service is not Active.";
 
     sel.GetScanners();
+}
+
+void Dialog::on_lineEdit_textChanged(const QString &arg1)
+{
+    pos_handler->expected() = arg1.toInt();
+    pos_handler->update_xml("positions.xml");
 }

@@ -67,7 +67,7 @@ public:
     virtual std::string to_string() = 0;
     virtual const std::string & name() = 0;
     virtual int& current() = 0;
-    virtual int expected() = 0;
+    virtual int& expected() = 0;
     virtual void write_header(std::ofstream &) = 0;
     virtual void write_scan(const std::string &path, const std::string &code) = 0;
     virtual void update_xml(const std::string &) = 0;
@@ -98,7 +98,7 @@ public:
         return positions[current_name].current;
     }
 
-    int expected() override {
+    int& expected() override {
         return positions[current_name].expected;
     }
 
@@ -161,10 +161,12 @@ public:
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
             if(position_name == current_name) {
-                ++positions[current_name].current;
+                positions[current_name].current;
                 cout << "current name: " << current_name << endl;
                 cout << "current number: " << positions[current_name].current << endl;
+                cout << "expected number: " << positions[current_name].expected << endl;
                 position_xml.attribute("current").set_value(positions[current_name].current);
+                position_xml.attribute("expected").set_value(positions[current_name].expected);
             }
         }
 
@@ -247,7 +249,7 @@ public:
         return positions[current_name].current;
     }
 
-    int expected() override {
+    int& expected() override {
         return positions[current_name].expected;
     }
 
@@ -299,15 +301,22 @@ public:
         if (not doc.load_file(xml_path.c_str())) {
             cout << "Не удалось загрузить XML документ" << endl;
             return;
+        } else {
+            cout << "Удалось загрузить XML документ" << endl;
         }
 
         pugi::xml_node positions_xml = doc.child("resources").child(mode().c_str());
+        cout << "mode: " << mode().c_str() << endl;
 
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
             if(position_name == current_name) {
-                ++positions[current_name].current;
+                positions[current_name].current;
+                cout << "current name: " << current_name << endl;
+                cout << "current number: " << positions[current_name].current << endl;
+                cout << "expected number: " << positions[current_name].expected << endl;
                 position_xml.attribute("current").set_value(positions[current_name].current);
+                position_xml.attribute("expected").set_value(positions[current_name].expected);
             }
         }
 
@@ -399,7 +408,7 @@ private slots:
     void on_comboBox_currentTextChanged(const QString &arg1);
 
     void on_pushButton_clicked();
-
+    void on_lineEdit_textChanged(const QString &arg1);
 private:
     Ui::Dialog *ui;
     std::set<std::string> codes;
