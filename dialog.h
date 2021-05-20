@@ -165,7 +165,7 @@ public:
                 cout << "current name: " << current_name << endl;
                 cout << "current number: " << positions[current_name].current << endl;
                 cout << "expected number: " << positions[current_name].expected << endl;
-                position_xml.attribute("current").set_value(positions[current_name].current);
+                position_xml.attribute("current").set_value(positions[current_name].current); // maybe set number??? TODO
                 position_xml.attribute("expected").set_value(positions[current_name].expected);
             }
         }

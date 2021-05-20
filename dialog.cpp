@@ -18,18 +18,20 @@
 
 namespace fs = std::filesystem;
 using namespace std::chrono_literals;
-
+using namespace std;
+using namespace std::filesystem;
+using std::filesystem::directory_iterator;
 
 ostream& operator<<( ostream&  out, Position& pos ) {
-    out << pos.code_tn_ved << " " << endl
-        << pos.document_type << " " << endl
-        << pos.document_number << " " << endl
-        << pos.document_date << " " << endl
-        << pos.vsd << " " << endl
-        << pos.expected << " " << endl
-        << pos.current << " " << endl
-        << pos.name  << " " << endl
-        << pos.inn << endl;
+    out << "code_tn_ved: " << pos.code_tn_ved << " " << endl
+        << "document_type: " << pos.document_type << " " << endl
+        << "document_number: " << pos.document_number << " " << endl
+        << "document_date: " << pos.document_date << " " << endl
+        << "vsd: " << pos.vsd << " " << endl
+        << "expected: " << pos.expected << " " << endl
+        << "current: " << pos.current << " " << endl
+        << "name: " << pos.name << " " << endl
+        << "inn:" << pos.inn << endl;
 
     return out;
 }
@@ -85,9 +87,50 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
         cout << "Удалось загрузить XML документ" << endl;
     }
 
+
+
+    std::ifstream vsd;
+    string vsd_name = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
+    vsd.open(vsd_name);
+    if(not vsd.is_open()) {
+        std::cout<<"Ошибка открытия vsd.csv"<<std::endl;
+        return;
+    } else {
+        std::cout<<"Открытие vsd.csv успешно"<<std::endl;
+    }
+
+    string line;
+    for (int i = 0; std::getline(vsd, line); ++i) {
+        cout << "line: " << line << endl;
+        string name = line.substr(0, line.find(","));
+        string vsd = line.substr(line.find(",") + 1);
+
+        cout << "name: " << name << endl;
+        cout << "vsd: " << vsd << endl;
+
+        pugi::xml_node positions_xml = doc.child("resources").child(pos_handler->mode().c_str());
+
+        for (pugi::xml_node position_xml: positions_xml.children("position")) {
+            std::string position_name = position_xml.attribute("name").as_string();
+            if(name == "milk Byrenka" && position_name == "молоко Буренка") {
+                position_xml.attribute("vsd").set_value(vsd.c_str());
+            } else if(name == "sir Kavkazskiu" && position_name == "сыр Кавказский") {
+                position_xml.attribute("vsd").set_value(vsd.c_str());
+            }
+        }
+
+        //if(not doc.save_file(xml_path.c_str())) {
+        //    cout << "Не удалось сохранить XML документ" << endl;
+        //    return;
+        //}
+    }
+
     auto names = pos_handler->add_positions(doc);
     if(names.empty())
         return;
+
+
+    //парсить по строчно
 
     QStringList qnames;
     qnames.reserve(names.size());
@@ -156,16 +199,18 @@ Dialog::~Dialog()
 }
 
 bool Dialog::codeExists(std::ifstream & myfile, string & barCode) {
+    cout << "codeExists: " << endl;
+    cout << "barCode: " << barCode << endl;
 
     codes.clear();
     string line;
+
     for (int i = 0; std::getline(myfile, line); ++i) {
         if(i < 3)
             continue;
 
-        cout << "line: " << line << endl;
         string code = line.substr(1, line.find(",") - 2);
-
+        cout << "line: " << line << endl;
         cout << "code: " << code << endl;
 
         codes.insert(code);
@@ -176,6 +221,10 @@ bool Dialog::codeExists(std::ifstream & myfile, string & barCode) {
 
 void Dialog::barCodeEvent(string barCode)
 {
+    if(pos_handler->current() == pos_handler->expected()) {
+        close();
+    }
+
     std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
     std::string time_pattern = std::string("%H:%M:%S");
 
@@ -187,43 +236,33 @@ void Dialog::barCodeEvent(string barCode)
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
     strftime (time_buffer,80,time_pattern.c_str(),now);
 
-    fs::create_directories(pos_handler->mode()); // don't need to always create
-
-    std::ofstream myfile;
+    create_directories("/mnt/hgfs/shared_folder/" + pos_handler->mode());
 
     cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
 
     string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
-    if(pos_handler->current() == 0 || pos_handler->current() == 1500) {
-        std::filesystem::path cwd = std::filesystem::current_path();
-        cwd /= pos_handler->mode();
-        std::filesystem::path filePath = cwd / filename;
+    if (pos_handler->current() == 0 || pos_handler->current() == 1500) {
+         std::ofstream myfile_shared;
 
-        myfile.open(filePath);
-        if(not myfile.is_open()) {
-            std::cout<<"Ошибка создания файла шаблона"<<std::endl;
-            return;
-        }
+         string myfile_shared_name = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + filename;
+         myfile_shared.open(myfile_shared_name);
+         if(not myfile_shared.is_open()) {
+             std::cout<<"Ошибка создания файла шаблона"<<std::endl;
+             return;
+         }
 
-        pos_handler->write_header(myfile);
-        fs::copy_file(filePath, "/mnt/hgfs/shared_folder/" + filename);
+         pos_handler->write_header(myfile_shared);
 
-        cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
-        myfile.close();
+         cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
+         myfile_shared.close();
     }
-
-
-    using std::cout; using std::cin;
-    using std::endl; using std::string;
-    using std::filesystem::directory_iterator;
-
-    using std::filesystem::current_path;
 
     ulong max = 0;
     std::string maxPath = "";
+    std::string maxPathFileName = "";
 
     cout << "Шаблоны этой позиции:" << endl;
-    for (const auto & file : directory_iterator(current_path() / pos_handler->mode())) {
+    for (const auto & file : directory_iterator(std::filesystem::path("/mnt/hgfs/shared_folder/") / pos_handler->mode())) {
         std::string path_curr = file.path();
 
         std::string curName = pos_handler->name();
@@ -248,6 +287,13 @@ void Dialog::barCodeEvent(string barCode)
 
     cout << "Выбран самый последний из шаблонов для данной позиции: " << maxPath << endl;
 
+    maxPathFileName = maxPath.substr(maxPath.find_last_of("/") + 1);
+    cout << "С именем: " << maxPathFileName << endl;
+
+    barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
+    barCode.insert(0, 1, '"');
+    barCode.push_back('"');
+
     std::ifstream ifs(maxPath);
     if(codeExists(ifs, barCode)) {
         ifs.close();
@@ -259,11 +305,7 @@ void Dialog::barCodeEvent(string barCode)
         ifs.close();
     }
 
-    barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
-    barCode.insert(0, 1, '"');
-    barCode.push_back('"');
-
-    pos_handler->write_scan(maxPath, barCode);
+    pos_handler->write_scan("/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName, barCode);
     ++pos_handler->current();
     pos_handler->update_xml("positions.xml");
 
@@ -272,6 +314,17 @@ void Dialog::barCodeEvent(string barCode)
     ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
     timer.reset();
     cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
+
+    if(pos_handler->current() == pos_handler->expected()) {
+        QMessageBox msgBox;
+        msgBox.setText("Завершение");
+        msgBox.setInformativeText("Плановое количество КМ внесено, шаблон сохранен и программа будет закрыта.");
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.setDefaultButton(QMessageBox::Ok);
+        msgBox.exec();
+        close();
+    }
 }
 
 void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
