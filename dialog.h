@@ -395,14 +395,14 @@ class Dialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit Dialog(WF work_format_, QWidget *parent = nullptr);
+    explicit Dialog(WF work_format_, bool new_template, QWidget *parent = nullptr);
     ~Dialog();
 
-    void barCodeEvent(std::string barCode);
+    void barCodeEvent(std::string bar_code);
 
     QString get_decode_data(std::string outXml);
     std::vector<std::string> stringTokernize(std::string inStr, char cDelim);
-    bool codeExists(ifstream &myfile, string &barCode);
+    bool codeExists(ifstream &myfile, const string &barCode);
     void listen_comport();
 private slots:
     void on_comboBox_currentTextChanged(const QString &arg1);
@@ -411,10 +411,6 @@ private slots:
     void on_lineEdit_textChanged(const QString &arg1);
 private:
     Ui::Dialog *ui;
-    std::set<std::string> codes;
-
-
-
 
     SampleEventListener sel;
     const WF work_format;

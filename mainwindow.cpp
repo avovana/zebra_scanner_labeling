@@ -2,6 +2,7 @@
 #include "./ui_mainwindow.h"
 
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -18,14 +19,18 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    f1 = new Dialog(WF::vvod, this);
+    f2 = new quest(WF::vvod,this);
+    //f1 = new Dialog(WF::vvod, this);
     hide();
-    f1->exec();
+    f2->exec();
+    //f1->exec();
 }
 
 void MainWindow::on_pushButton_2_clicked()
 {
-    f1 = new Dialog(WF::vivod, this);
+    f2 = new quest(WF::vivod,this);
+    //f1 = new Dialog(WF::vivod, this);
     hide();
-    f1->exec();
+    f2->exec();
+    //f1->exec();
 }

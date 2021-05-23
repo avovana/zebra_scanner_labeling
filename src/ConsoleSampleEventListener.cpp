@@ -472,7 +472,7 @@ void SampleEventListener::OnBarcodeEvent(short int eventType, std::string & psca
     std::string decoded_bar_code = get_decode_data(pscanData);
 
 
-    cout << "barcode:    " << decoded_bar_code << flush;
+    cout << "bar_code:    " << decoded_bar_code << endl;
     dialog.barCodeEvent(decoded_bar_code);
 }
 

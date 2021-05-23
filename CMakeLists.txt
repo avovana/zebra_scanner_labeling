@@ -36,6 +36,9 @@ add_executable(${PROJECT_NAME}
     pugixml.cpp
     comport.cpp
     comport.h
+    quest.h
+    quest.cpp
+    quest.ui
 
     ${SOURCE_FILES}
 )

@@ -52,7 +52,7 @@ ostream& operator<<( ostream&  out, CancelPos& pos ) {
     return out;
 }
 
-Dialog::Dialog(WF work_format_, QWidget *parent) :
+Dialog::Dialog(WF work_format_, bool new_template, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
     sel(*this),
@@ -112,25 +112,24 @@ Dialog::Dialog(WF work_format_, QWidget *parent) :
 
         for (pugi::xml_node position_xml: positions_xml.children("position")) {
             std::string position_name = position_xml.attribute("name").as_string();
+            std::string cheese = string("Сыр мягкий \"Кавказский\"");
             if(name == "milk Byrenka" && position_name == "молоко Буренка") {
                 position_xml.attribute("vsd").set_value(vsd.c_str());
-            } else if(name == "sir Kavkazskiu" && position_name == "сыр Кавказский") {
+                cout << "milk----" << endl;
+            } else if(name == "sir Kavkazskiu" && position_name == cheese) {
                 position_xml.attribute("vsd").set_value(vsd.c_str());
+                cout << "cheese----" << endl;
             }
         }
 
-        //if(not doc.save_file(xml_path.c_str())) {
-        //    cout << "Не удалось сохранить XML документ" << endl;
-        //    return;
-        //}
+        for (pugi::xml_node position_xml: positions_xml.children("position"))
+            if(new_template)
+                position_xml.attribute("current").set_value(0);
     }
 
     auto names = pos_handler->add_positions(doc);
     if(names.empty())
         return;
-
-
-    //парсить по строчно
 
     QStringList qnames;
     qnames.reserve(names.size());
@@ -198,32 +197,48 @@ Dialog::~Dialog()
     delete ui;
 }
 
-bool Dialog::codeExists(std::ifstream & myfile, string & barCode) {
+bool Dialog::codeExists(std::ifstream & myfile, const string & barCode) {
     cout << "codeExists: " << endl;
     cout << "barCode: " << barCode << endl;
+    int pos_to_compare = 25;
+    string bar_code_to_compare = barCode.substr(0, pos_to_compare);
+    cout << "bar_code_to_compare: " << bar_code_to_compare << endl;
+    cout << "codes from file: " << endl;
 
-    codes.clear();
     string line;
 
     for (int i = 0; std::getline(myfile, line); ++i) {
         if(i < 3)
             continue;
 
-        string code = line.substr(1, line.find(",") - 2);
+        string code = line.substr(0, pos_to_compare);
         cout << "line: " << line << endl;
         cout << "code: " << code << endl;
 
-        codes.insert(code);
+        if(code == bar_code_to_compare) {
+            cout << "дубль кода: " << code << endl;
+            return true;
+        } else {
+            cout << "оригинальный: " << code << endl;
+        }
     }
 
-    return codes.count(barCode);
+    return false;
 }
 
-void Dialog::barCodeEvent(string barCode)
+void Dialog::barCodeEvent(string bar_code)
 {
-    if(pos_handler->current() == pos_handler->expected()) {
-        close();
-    }
+    char gs = 29;
+
+    auto pos = bar_code.find(gs);
+
+    if(pos == string::npos)
+        cout << "не найден" << endl;
+    else
+        cout << "gs найден: " << pos << endl;
+
+    bar_code = bar_code.substr(0,pos);
+    cout << "bar_code substr= " << bar_code << endl;
 
     std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
     std::string time_pattern = std::string("%H:%M:%S");
@@ -235,6 +250,14 @@ void Dialog::barCodeEvent(string barCode)
     char time_buffer [80];
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
     strftime (time_buffer,80,time_pattern.c_str(),now);
+
+    if(pos_handler->current() == pos_handler->expected()) {
+        cout << "barCodeEvent: " << "pos_handler->current() == pos_handler->expected()" << endl;
+        ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Шаблон завершен. Скан не будет сохранен!</p>").arg(time_buffer));
+        //close();
+        return;
+    }
+    cout << "barCodeEvent: " << "pos_handler->current() != pos_handler->expected()" << endl;
 
     create_directories("/mnt/hgfs/shared_folder/" + pos_handler->mode());
 
@@ -290,12 +313,12 @@ void Dialog::barCodeEvent(string barCode)
     maxPathFileName = maxPath.substr(maxPath.find_last_of("/") + 1);
     cout << "С именем: " << maxPathFileName << endl;
 
-    barCode = std::regex_replace(barCode, std::regex("\""), "\"\"");
-    barCode.insert(0, 1, '"');
-    barCode.push_back('"');
+    bar_code = std::regex_replace(bar_code, std::regex("\""), "\"\"");
+    bar_code.insert(0, 1, '"');
+    bar_code.push_back('"');
 
     std::ifstream ifs(maxPath);
-    if(codeExists(ifs, barCode)) {
+    if(codeExists(ifs, bar_code)) {
         ifs.close();
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
         cout << "Дубль скана не сохранен" << endl;
@@ -305,7 +328,7 @@ void Dialog::barCodeEvent(string barCode)
         ifs.close();
     }
 
-    pos_handler->write_scan("/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName, barCode);
+    pos_handler->write_scan("/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName, bar_code);
     ++pos_handler->current();
     pos_handler->update_xml("positions.xml");
 
@@ -317,8 +340,8 @@ void Dialog::barCodeEvent(string barCode)
 
     if(pos_handler->current() == pos_handler->expected()) {
         QMessageBox msgBox;
-        msgBox.setText("Завершение");
-        msgBox.setInformativeText("Плановое количество КМ внесено, шаблон сохранен и программа будет закрыта.");
+        msgBox.setText("Формирование шаблона завершено");
+        msgBox.setInformativeText("Плановое количество КМ достигнуто. Программа будет закрыта");
         msgBox.setStandardButtons(QMessageBox::Ok);
         msgBox.setIcon(QMessageBox::Information);
         msgBox.setDefaultButton(QMessageBox::Ok);
