@@ -184,18 +184,6 @@ bool Dialog::codeExists(std::ifstream & myfile, const string & barCode) {
 
 void Dialog::barCodeEvent(string bar_code)
 {
-    char gs = 29;
-
-    auto pos = bar_code.find(gs);
-
-    if(pos == string::npos)
-        cout << "не найден" << endl;
-    else
-        cout << "gs найден: " << pos << endl;
-
-    bar_code = bar_code.substr(0,pos);
-    cout << "bar_code substr= " << bar_code << endl;
-
     std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
     std::string time_pattern = std::string("%H:%M:%S");
 
@@ -206,6 +194,24 @@ void Dialog::barCodeEvent(string bar_code)
     char time_buffer [80];
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
     strftime (time_buffer,80,time_pattern.c_str(),now);
+
+    char gs = 29;
+
+    auto pos = bar_code.find(gs);
+
+    if(bar_code.size() <= 20) {
+        ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Считан неверны штрих код. Повторить сканирование</p>").arg(time_buffer));
+        cout << "Не верный код! Меньше 21 символов" << endl;
+    }
+
+    if(pos == string::npos)
+        cout << "не найден" << endl;
+    else
+        cout << "gs найден: " << pos << endl;
+
+    bar_code = bar_code.substr(0,pos);
+    cout << "bar_code substr= " << bar_code << endl;
+
 
     if(pos_handler->current() == pos_handler->expected()) {
         cout << "barCodeEvent: " << "pos_handler->current() == pos_handler->expected()" << endl;
