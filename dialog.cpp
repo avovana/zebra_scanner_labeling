@@ -67,67 +67,23 @@ Dialog::Dialog(WF work_format_, bool new_template, QWidget *parent) :
     for (const QSerialPortInfo &info : infos)
         ui->comboBox_2->addItem(info.portName());
 
+    const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
+    const string positions_path = "positions.xml";
+
     switch (work_format) {
     case vvod:
-        pos_handler.reset(new InputPos());
+        pos_handler.reset(new InputPos(vsd_path, positions_path, new_template));
         break;
     case vivod:
-        pos_handler.reset(new OutputPos());
+        pos_handler.reset(new OutputPos(vsd_path, positions_path, new_template));
         break;
     default:
         cout << "bad work_format: " << work_format << endl;
         return;
     }
 
-    pugi::xml_document doc;
-    if (!doc.load_file("positions.xml")) {
-        cout << "Не удалось загрузить XML документ" << endl;
-        return;
-    } else {
-        cout << "Удалось загрузить XML документ" << endl;
-    }
+    auto names = pos_handler->add_positions(positions_path);
 
-
-
-    std::ifstream vsd;
-    string vsd_name = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
-    vsd.open(vsd_name);
-    if(not vsd.is_open()) {
-        std::cout<<"Ошибка открытия vsd.csv"<<std::endl;
-        return;
-    } else {
-        std::cout<<"Открытие vsd.csv успешно"<<std::endl;
-    }
-
-    string line;
-    for (int i = 0; std::getline(vsd, line); ++i) {
-        cout << "line: " << line << endl;
-        string name = line.substr(0, line.find(","));
-        string vsd = line.substr(line.find(",") + 1);
-
-        cout << "name: " << name << endl;
-        cout << "vsd: " << vsd << endl;
-
-        pugi::xml_node positions_xml = doc.child("resources").child(pos_handler->mode().c_str());
-
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string position_name = position_xml.attribute("name").as_string();
-            std::string cheese = string("Сыр мягкий \"Кавказский\"");
-            if(name == "milk Byrenka" && position_name == "молоко Буренка") {
-                position_xml.attribute("vsd").set_value(vsd.c_str());
-                cout << "milk----" << endl;
-            } else if(name == "sir Kavkazskiu" && position_name == cheese) {
-                position_xml.attribute("vsd").set_value(vsd.c_str());
-                cout << "cheese----" << endl;
-            }
-        }
-
-        for (pugi::xml_node position_xml: positions_xml.children("position"))
-            if(new_template)
-                position_xml.attribute("current").set_value(0);
-    }
-
-    auto names = pos_handler->add_positions(doc);
     if(names.empty())
         return;
 
@@ -328,9 +284,9 @@ void Dialog::barCodeEvent(string bar_code)
         ifs.close();
     }
 
-    pos_handler->write_scan("/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName, bar_code);
-    ++pos_handler->current();
-    pos_handler->update_xml("positions.xml");
+    std::string path = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName;
+    pos_handler->update_output_path(path);
+    pos_handler->write_scan(bar_code);
 
     ui->label_7->setNum(pos_handler->current());
 

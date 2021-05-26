@@ -9,6 +9,7 @@
 #include <thread>
 #include <memory>
 #include <fstream>
+#include <stdexcept>
 
 #include "pugixml.hpp"
 
@@ -63,16 +64,63 @@ struct Position
 
 class Pos {
 public:
+    Pos (const std::string & vsd_path, const std::string & positions_path, bool new_template) {
+        vsd_per_names = get_vsds(vsd_path);
+
+        if(vsd_per_names.empty())
+            throw std::logic_error("no vsds");
+
+    }
+
+    std::map<std::string, std::string> get_vsds(const std::string & vsd_path) {
+        std::ifstream vsd;
+
+        vsd.open(vsd_path);
+        if(not vsd.is_open()) {
+            std::cout<<"Ошибка открытия vsd.csv"<<std::endl;
+            return {};
+        } else {
+            std::cout<<"Открытие vsd.csv успешно"<<std::endl;
+        }
+
+        std::map<std::string, std::string> vsds;
+        string line;
+        for (int i = 0; std::getline(vsd, line); ++i) {
+            cout << "line: " << line << endl;
+            cout << "line.size(): " << line.size() << endl;
+
+            int pos = line.size() - 12;
+            cout << "line.size() - 12: " << pos << endl;
+            string name = line.substr(0, line.find(","));
+            int comma_pos = line.find(",");
+            int size_of_vsd = line.size() - 1 - (comma_pos + 1);
+            cout << "comma_pos: " << comma_pos << endl;
+            cout << "size_of_vsd: " << size_of_vsd << endl;
+            string vsd = line.substr(comma_pos + 1, size_of_vsd);
+
+            cout << "name: " << name << endl;
+            cout << "vsd: " << vsd << endl;
+            cout << "vsd.size(): " << vsd.size() << endl;
+
+            vsds.emplace(name,vsd);
+        }
+
+        return vsds;
+    }
+
     virtual std::string mode() = 0;
     virtual std::string to_string() = 0;
     virtual const std::string & name() = 0;
     virtual int& current() = 0;
     virtual int& expected() = 0;
+    virtual void update_output_path(const std::string &) = 0;
     virtual void write_header(std::ofstream &) = 0;
-    virtual void write_scan(const std::string &path, const std::string &code) = 0;
+    virtual void write_scan(const std::string &code) = 0;
     virtual void update_xml(const std::string &) = 0;
-    virtual std::vector<std::string> add_positions(const pugi::xml_document &) = 0;
+    virtual std::vector<std::string> add_positions(const std::string &) = 0;
     virtual bool set_current_position_if_exists(const std::string &) = 0;
+
+    std::map<std::string, std::string> vsd_per_names;
 };
 
 
@@ -80,6 +128,46 @@ ostream& operator<<( ostream&  out, Position& pos );
 
 class InputPos : public Pos {
 public:
+    InputPos(const std::string & vsd_path, const std::string & positions_path, bool new_template) : Pos(vsd_path, positions_path, new_template)
+    {
+
+        pugi::xml_document doc;
+        if (!doc.load_file(positions_path.c_str())) {
+            cout << "Не удалось загрузить XML документ" << endl;
+            throw std::logic_error("no xml document");
+        } else {
+            cout << "Удалось загрузить XML документ" << endl;
+        }
+
+        for(auto &[name, vsd] : vsd_per_names) {
+            pugi::xml_node positions_xml = doc.child("resources").child(mode().c_str());
+
+            for (pugi::xml_node position_xml: positions_xml.children("position")) {
+                std::string position_name = position_xml.attribute("name").as_string();
+                std::string cheese = string("Сыр мягкий \"Кавказский\"");
+                if(name == "milk Byrenka" && position_name == "молоко Буренка") {
+                    position_xml.attribute("vsd").set_value(vsd.c_str());
+                    cout << "milk----" << endl;
+                } else if(name == "sir Kavkazskiu" && position_name == cheese) {
+                    position_xml.attribute("vsd").set_value(vsd.c_str());
+                    cout << "cheese----" << endl;
+                }
+            }
+
+            for (pugi::xml_node position_xml: positions_xml.children("position"))
+                if(new_template)
+                    position_xml.attribute("current").set_value(0);
+        }
+
+        if(not doc.save_file(positions_path.c_str())) {
+            cout << "Не удалось сохранить XML документ" << endl;
+            return;
+        }
+
+        //add_positions(positions_path);
+
+    }
+
     std::string mode() override {
         return "input";
     }
@@ -115,10 +203,14 @@ public:
         os << "КИ,КИТУ,Дата производства,Код ТН ВЭД ЕАС товара,Вид документа подтверждающего соответствие,Номер документа подтверждающего соответствие,Дата документа подтверждающего соответствие,Идентификатор ВСД" << endl;
     }
 
-    void write_scan(const std::string &path, const std::string &bar_code) override {
+    void update_output_path(const std::string &path) override {
+        output_path = path;
+    }
+
+    void write_scan(const std::string &bar_code) override {
         std::ofstream myfile;
 
-        myfile.open (path, std::ios_base::app);
+        myfile.open (output_path, std::ios_base::app);
         if(not myfile.is_open()) {
             std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
             return;
@@ -138,11 +230,29 @@ public:
            << positions[current_name].document_type << ","
            << positions[current_name].document_number << ","
            << positions[current_name].document_date << ","
-           << positions[current_name].vsd << endl;
+           << positions[current_name].vsd;
+        std::cout << "positions[current_name].document_date: " << positions[current_name].document_date.size() << std::endl;
 
-        std::cout<<"Шаблон обновлен" << std::endl;
+        std::cout << positions[current_name].vsd << std::endl;
+        std::cout << positions[current_name].vsd.c_str() << std::endl;
+
+        std::cout << positions[current_name].vsd.size() << std::endl;
+        std::cout << strlen(positions[current_name].vsd.c_str()) << std::endl;
+
+        ++positions[current_name].current;
+
+        if(positions[current_name].current != positions[current_name].expected) {
+            std::cout <<"current != expected" << std::endl;
+            myfile << endl;
+        } else {
+            std::cout <<"current == expected" << std::endl;
+        }
 
         myfile.close();
+
+        update_xml("positions.xml");
+
+        std::cout<<"Шаблон обновлен" << std::endl;
     }
 
     void update_xml(const std::string &xml_path) override {
@@ -176,7 +286,15 @@ public:
         }
     }
 
-    std::vector<std::string> add_positions(const pugi::xml_document &doc) override {
+    std::vector<std::string> add_positions(const std::string & position_path) override {
+        pugi::xml_document doc;
+        if (!doc.load_file(position_path.c_str())) {
+            cout << "Не удалось загрузить XML документ" << endl;
+            return {};
+        } else {
+            cout << "Удалось загрузить XML документ" << endl;
+        }
+
         pugi::xml_node inn_xml = doc.child("resources").child("inn");
         pugi::xml_node version = doc.child("resources").child("version");
 
@@ -227,10 +345,49 @@ public:
 private:
     std::map<std::string, Position> positions;
     std::string current_name;
+    std::string output_path;
 };
 
 class OutputPos : public Pos {
 public:
+    OutputPos(const std::string & vsd_path, const std::string & positions_path, bool new_template) : Pos(vsd_path, positions_path, new_template)
+    {
+        pugi::xml_document doc;
+        if (!doc.load_file(positions_path.c_str())) {
+            cout << "Не удалось загрузить XML документ" << endl;
+            throw std::logic_error("no xml document");
+        } else {
+            cout << "Удалось загрузить XML документ" << endl;
+        }
+
+        for(auto &[name, vsd] : vsd_per_names) {
+            pugi::xml_node positions_xml = doc.child("resources").child(mode().c_str());
+
+            for (pugi::xml_node position_xml: positions_xml.children("position")) {
+                std::string position_name = position_xml.attribute("name").as_string();
+                std::string cheese = string("Сыр мягкий \"Кавказский\"");
+                if(name == "milk Byrenka" && position_name == "молоко Буренка") {
+                    position_xml.attribute("vsd").set_value(vsd.c_str());
+                    cout << "milk----" << endl;
+                } else if(name == "sir Kavkazskiu" && position_name == cheese) {
+                    position_xml.attribute("vsd").set_value(vsd.c_str());
+                    cout << "cheese----" << endl;
+                }
+            }
+
+            for (pugi::xml_node position_xml: positions_xml.children("position"))
+                if(new_template)
+                    position_xml.attribute("current").set_value(0);
+        }
+
+        if(not doc.save_file(positions_path.c_str())) {
+            cout << "Не удалось сохранить XML документ" << endl;
+            return;
+        }
+
+        //add_positions(positions_path);
+    }
+
     std::string mode() override {
         return "output";
     }
@@ -265,12 +422,17 @@ public:
             os << positions[current_name].inn << "," << positions[current_name].reason_of_cancellation << "," << date_buffer << "," << positions[current_name].document_type << "," << positions[current_name].document_number << "," << positions[current_name].document_date << "," << positions[current_name].document_name << "," << positions[current_name].register_number_kkt << ",4" << endl;
             os << "КИ,Цена за единицу,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа" << endl;
 
-        }
+    }
 
-    void write_scan(const std::string &path, const std::string &bar_code) override {
+
+    void update_output_path(const std::string &path) override {
+        output_path = path;
+    }
+
+    void write_scan(const std::string &bar_code) override {
         std::ofstream myfile;
 
-        myfile.open (path, std::ios_base::app);
+        myfile.open (output_path, std::ios_base::app);
         if(not myfile.is_open()) {
             std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
             return;
@@ -288,11 +450,18 @@ public:
                << positions[current_name].document_type << ","
                << positions[current_name].document_number << ","
                << positions[current_name].document_date << ","
-               << positions[current_name].document_name << endl;
+               << positions[current_name].document_name;
 
-        std::cout<<"Шаблон обновлен" << std::endl;
+        ++positions[current_name].current;
+
+        if(positions[current_name].current != positions[current_name].expected)
+            myfile << endl;
 
         myfile.close();
+
+        update_xml("positions.xml");
+
+        std::cout<<"Шаблон обновлен" << std::endl;
     }
 
     void update_xml(const std::string &xml_path) override {
@@ -326,7 +495,15 @@ public:
         }
     }
 
-    std::vector<std::string> add_positions(const pugi::xml_document &doc) override {
+    std::vector<std::string> add_positions(const std::string & position_path) override {
+        pugi::xml_document doc;
+        if (!doc.load_file(position_path.c_str())) {
+            cout << "Не удалось загрузить XML документ" << endl;
+            return {};
+        } else {
+            cout << "Удалось загрузить XML документ" << endl;
+        }
+
         pugi::xml_node inn_xml = doc.child("resources").child("inn");
         pugi::xml_node version = doc.child("resources").child("version");
 
@@ -379,6 +556,7 @@ public:
 private:
     std::map<std::string, CancelPos> positions;
     std::string current_name;
+    std::string output_path;
 };
 
 namespace Ui {
@@ -399,6 +577,8 @@ public:
     ~Dialog();
 
     void barCodeEvent(std::string bar_code);
+    void write_scan(std::string bar_code);
+
 
     QString get_decode_data(std::string outXml);
     std::vector<std::string> stringTokernize(std::string inStr, char cDelim);
