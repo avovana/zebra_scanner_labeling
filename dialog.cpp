@@ -70,25 +70,36 @@ Dialog::Dialog(WF work_format_, bool new_template, QWidget *parent) :
     const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
     const string positions_path = "positions.xml";
 
+    const auto& vsds = get_vsds(vsd_path);
+    if(vsds.empty()) {
+        cout << "ВСД не найдены" << endl;
+        close();
+    }
+
+    if(not update_config_file(positions_path, vsds, new_template)) {
+        cout << "Не получилось обновить XML конфигурационный файл" << endl;
+        close();
+    }
+
     switch (work_format) {
     case vvod:
-        pos_handler.reset(new InputPos(vsd_path, positions_path, new_template));
+        pos_handler.reset(new InputPos(positions_path));
         break;
     case vivod:
-        pos_handler.reset(new OutputPos(vsd_path, positions_path, new_template));
+        pos_handler.reset(new OutputPos(positions_path));
         break;
     default:
         cout << "bad work_format: " << work_format << endl;
         return;
     }
 
-    auto names = pos_handler->add_positions(positions_path);
-
-    if(names.empty())
-        return;
+    auto names = pos_handler->names();
+    if(names.empty()) {
+        cout << "Отсутсвуют считанные имена позиций" << endl;
+        close();
+    }
 
     QStringList qnames;
-    qnames.reserve(names.size());
 
     for(auto const& name: names)
          qnames.push_back(QString::fromStdString(name));
@@ -290,9 +301,8 @@ void Dialog::barCodeEvent(string bar_code)
         ifs.close();
     }
 
-    std::string path = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName;
-    pos_handler->update_output_path(path);
-    pos_handler->write_scan(bar_code);
+    std::string output_file_name = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName;
+    pos_handler->write_scan(output_file_name, bar_code);
 
     ui->label_7->setNum(pos_handler->current());
 
