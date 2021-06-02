@@ -213,6 +213,7 @@ void Dialog::barCodeEvent(string bar_code)
     if(bar_code.size() <= 20) {
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Считан неверны штрих код. Повторить сканирование</p>").arg(time_buffer));
         cout << "Не верный код! Меньше 21 символов" << endl;
+        return;
     }
 
     if(pos == string::npos)
