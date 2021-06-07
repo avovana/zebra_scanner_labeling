@@ -29,7 +29,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+    <item row="3" column="0">
      <widget class="QPushButton" name="pushButton">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -46,14 +46,59 @@
        <string notr="true">background-color: rgb(141, 255, 255);</string>
       </property>
       <property name="text">
-       <string>ВВОД 
-ТОВАРОВ
- В ОБОРОТ</string>
+       <string>Далее</string>
       </property>
      </widget>
     </item>
-    <item row="0" column="1">
-     <widget class="QPushButton" name="pushButton_2">
+    <item row="1" column="0">
+     <widget class="QComboBox" name="comboBox_2">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>22</pointsize>
+        <stylestrategy>PreferDefault</stylestrategy>
+       </font>
+      </property>
+      <property name="cursor">
+       <cursorShape>ArrowCursor</cursorShape>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(141, 255, 255);</string>
+      </property>
+      <item>
+       <property name="text">
+        <string>Ввод товара в оборот</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Вывод товара из оборота</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item row="0" column="0">
+     <widget class="QComboBox" name="comboBox">
+      <property name="font">
+       <font>
+        <pointsize>22</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(141, 255, 255);</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="0">
+     <widget class="QComboBox" name="comboBox_3">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -68,11 +113,16 @@
       <property name="styleSheet">
        <string notr="true">background-color: rgb(141, 255, 255);</string>
       </property>
-      <property name="text">
-       <string>ВЫВОД
- ТОВАРОВ 
-ИЗ ОБОРОТА</string>
-      </property>
+      <item>
+       <property name="text">
+        <string>Начать новый шаблон</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Продолжить шаблон</string>
+       </property>
+      </item>
      </widget>
     </item>
    </layout>

@@ -28,10 +28,10 @@ ostream& operator<<( ostream&  out, Position& pos ) {
         << "document_number: " << pos.document_number << " " << endl
         << "document_date: " << pos.document_date << " " << endl
         << "vsd: " << pos.vsd << " " << endl
-        << "expected: " << pos.expected << " " << endl
-        << "current: " << pos.current << " " << endl
         << "name: " << pos.name << " " << endl
-        << "inn:" << pos.inn << endl;
+        << "inn:" << pos.inn << endl
+        << "expected: " << pos.expected << endl
+        << "current: " << pos.current << endl;
 
     return out;
 }
@@ -45,66 +45,33 @@ ostream& operator<<( ostream&  out, CancelPos& pos ) {
         << pos.register_number_kkt << " " << endl
         << pos.price << " " << endl
         << pos.inn << endl
-        << pos.expected << " " << endl
-        << pos.current << " " << endl
-        << pos.name  << " " << endl;
+        << pos.name  << " " << endl
+        << "expected: " << pos.expected << endl
+        << "current: " << pos.current << endl;
 
     return out;
 }
 
-Dialog::Dialog(WF work_format_, bool new_template, QWidget *parent) :
+Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
-    sel(*this),
-    work_format(work_format_)
+    pos_handler(std::move(pos_handler_)),
+    sel(*this)
 {
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
     ui->setupUi(this);
     setWindowState(Qt::WindowMaximized);
-
-    cout << "work_format: " << work_format << endl;
 
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
         ui->comboBox_2->addItem(info.portName());
 
-    const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
-    const string positions_path = "positions.xml";
+    ui->lineEdit->setText(QString::number(pos_handler->expected()));
 
-    const auto& vsds = get_vsds(vsd_path);
-    if(vsds.empty()) {
-        cout << "ВСД не найдены" << endl;
-        close();
-    }
+    ui->label_6->setText(QString::fromStdString(pos_handler->name()));
+    ui->label_7->setText(QString::number(pos_handler->current()));
 
-    if(not update_config_file(positions_path, vsds, new_template)) {
-        cout << "Не получилось обновить XML конфигурационный файл" << endl;
-        close();
-    }
-
-    switch (work_format) {
-    case vvod:
-        pos_handler.reset(new InputPos(positions_path));
-        break;
-    case vivod:
-        pos_handler.reset(new OutputPos(positions_path));
-        break;
-    default:
-        cout << "bad work_format: " << work_format << endl;
-        return;
-    }
-
-    auto names = pos_handler->names();
-    if(names.empty()) {
-        cout << "Отсутсвуют считанные имена позиций" << endl;
-        close();
-    }
-
-    QStringList qnames;
-
-    for(auto const& name: names)
-         qnames.push_back(QString::fromStdString(name));
-
-    ui->comboBox->addItems(qnames);
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
 
 void Dialog::listen_comport() {
@@ -164,7 +131,8 @@ Dialog::~Dialog()
     delete ui;
 }
 
-bool Dialog::codeExists(std::ifstream & myfile, const string & barCode) {
+bool Dialog::codeExists(std::string & maxPath, const string & barCode) {
+    std::ifstream myfile(maxPath);
     cout << "codeExists: " << endl;
     cout << "barCode: " << barCode << endl;
     int pos_to_compare = 25;
@@ -184,18 +152,24 @@ bool Dialog::codeExists(std::ifstream & myfile, const string & barCode) {
 
         if(code == bar_code_to_compare) {
             cout << "дубль кода: " << code << endl;
+
             return true;
         } else {
             cout << "оригинальный: " << code << endl;
         }
     }
 
+    myfile.close();
     return false;
 }
 
 void Dialog::barCodeEvent(string bar_code)
 {
-    std::string filename_pattern = std::string("%Y-%m-%d:%H-%M");
+    string bar_code_origin = bar_code;
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+
+    // Получение текущего времени в строке
+    std::string filename_pattern = std::string("%Y-%m-%d %H-%M");
     std::string time_pattern = std::string("%H:%M:%S");
 
     time_t t = time(0);
@@ -206,15 +180,16 @@ void Dialog::barCodeEvent(string bar_code)
     strftime (filename_buffer,80,filename_pattern.c_str(),now);
     strftime (time_buffer,80,time_pattern.c_str(),now);
 
-    char gs = 29;
-
-    auto pos = bar_code.find(gs);
-
+    // Валидация по 20 символов
     if(bar_code.size() <= 20) {
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Считан неверны штрих код. Повторить сканирование</p>").arg(time_buffer));
         cout << "Не верный код! Меньше 21 символов" << endl;
         return;
     }
+
+    // Обрезание по ГС
+    char gs = 29;
+    auto pos = bar_code.find(gs);
 
     if(pos == string::npos)
         cout << "не найден" << endl;
@@ -224,19 +199,21 @@ void Dialog::barCodeEvent(string bar_code)
     bar_code = bar_code.substr(0,pos);
     cout << "bar_code substr= " << bar_code << endl;
 
-
+    // Проверка на конец программе
     if(pos_handler->current() == pos_handler->expected()) {
-        cout << "barCodeEvent: " << "pos_handler->current() == pos_handler->expected()" << endl;
+        cout << "barCodeEvent: " << "current == expected" << endl;
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Шаблон завершен. Скан не будет сохранен!</p>").arg(time_buffer));
         //close();
         return;
     }
     cout << "barCodeEvent: " << "pos_handler->current() != pos_handler->expected()" << endl;
 
-    create_directories("/mnt/hgfs/shared_folder/" + pos_handler->mode());
-
     cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
 
+    create_directories("/mnt/hgfs/shared_folder/" + pos_handler->mode());
+    create_directories("/mnt/hgfs/shared_folder/ki/");
+
+    // Создание шаблонов
     string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
     if (pos_handler->current() == 0 || pos_handler->current() == 1500) {
          std::ofstream myfile_shared;
@@ -252,6 +229,14 @@ void Dialog::barCodeEvent(string bar_code)
 
          cout <<  "Создан новый шаблон для этой позиции: " << filename << endl;
          myfile_shared.close();
+
+
+         string ki_file_name = std::string(filename_buffer) + " " + pos_handler->name() +  "_ki" + ".csv";
+         string my_ki_file_shared_name = "/mnt/hgfs/shared_folder/ki/" + ki_file_name;
+         std::ofstream ki_file(my_ki_file_shared_name);
+
+         cout <<  "Создан новый шаблон КИ для этой позиции: " << ki_file_name << endl;
+         ki_file.close();
     }
 
     ulong max = 0;
@@ -259,10 +244,12 @@ void Dialog::barCodeEvent(string bar_code)
     std::string maxPathFileName = "";
 
     cout << "Шаблоны этой позиции:" << endl;
+    // Поиск самого последнего шаблона
     for (const auto & file : directory_iterator(std::filesystem::path("/mnt/hgfs/shared_folder/") / pos_handler->mode())) {
         std::string path_curr = file.path();
 
         std::string curName = pos_handler->name();
+        cout << "curName=" << curName << endl;
 
         std::size_t found = path_curr.find(curName);
         if (found == std::string::npos)
@@ -287,23 +274,75 @@ void Dialog::barCodeEvent(string bar_code)
     maxPathFileName = maxPath.substr(maxPath.find_last_of("/") + 1);
     cout << "С именем: " << maxPathFileName << endl;
 
+    // Поиск самого последнего шаблона КИ
+    std::string maxPathKi = "";
+    max = 0;
+    //=================================
+    cout << "Шаблоны ки этой позиции:" << endl;
+    for (const auto & file : directory_iterator(std::filesystem::path("/mnt/hgfs/shared_folder/ki/"))) {
+        std::string path_curr = file.path();
+
+        std::string curName = pos_handler->name();
+        cout << "curName=" << curName << endl;
+
+        std::size_t found = path_curr.find(curName);
+        if (found == std::string::npos)
+            continue;
+
+        auto filename = file.path();
+        struct stat result;
+        if(stat(filename.c_str(), &result)==0)
+        {
+            auto mod_time = result.st_mtime;
+            cout << path_curr << endl;
+
+            if(mod_time > max) {
+                max = mod_time;
+                maxPathKi = path_curr;
+            }
+        }
+    }
+
+    cout << "Выбран самый последний из шаблонов КИ для данной позиции: " << maxPathKi << endl;
+
+
+    // Проверка дубля
     bar_code = std::regex_replace(bar_code, std::regex("\""), "\"\"");
     bar_code.insert(0, 1, '"');
     bar_code.push_back('"');
 
-    std::ifstream ifs(maxPath);
-    if(codeExists(ifs, bar_code)) {
-        ifs.close();
+
+    if(codeExists(maxPath, bar_code)) {
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
         cout << "Дубль скана не сохранен" << endl;
         timer.reset();
         return;
-    } else {
-        ifs.close();
     }
 
+    // Запись скана
     std::string output_file_name = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName;
+
     pos_handler->write_scan(output_file_name, bar_code);
+
+    // Запись КИ. Выполнить после write_scan! Т.к. там внутри инкремент current.
+    std::ofstream ki_file;
+
+    ki_file.open (maxPathKi, std::ios_base::app);
+    if(not ki_file.is_open()) {
+        std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
+        return;
+    }
+
+    ki_file << bar_code_origin;
+
+    if(pos_handler->current() != pos_handler->expected())
+        ki_file << endl;
+
+    ki_file.close();
+
+    cout << "КИ записан" << endl;
+
+    // Оповещение UI
 
     ui->label_7->setNum(pos_handler->current());
 
@@ -321,14 +360,8 @@ void Dialog::barCodeEvent(string bar_code)
         msgBox.exec();
         close();
     }
-}
 
-void Dialog::on_comboBox_currentTextChanged(const QString &arg1)
-{
-    if(pos_handler->set_current_position_if_exists(arg1.toUtf8().constData())) {
-        ui->lineEdit->setText(QString::number(pos_handler->expected()));
-        ui->label_7->setNum(pos_handler->current());
-    }
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
 
 void Dialog::on_pushButton_clicked()
@@ -340,10 +373,41 @@ void Dialog::on_pushButton_clicked()
         qDebug() << "Corescanner service is not Active.";
 
     sel.GetScanners();
+    ui->lineEdit->setEnabled(false);
+    update_expected(ui->lineEdit->text().toInt());
 }
 
-void Dialog::on_lineEdit_textChanged(const QString &arg1)
-{
-    pos_handler->expected() = arg1.toInt();
-    pos_handler->update_xml("positions.xml");
+void Dialog::update_expected(int expected) {
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+    std::string xml_path = "positions.xml";
+
+    pugi::xml_document doc;
+
+    if (not doc.load_file(xml_path.c_str())) {
+        cout << "Не удалось загрузить XML документ" << endl;
+        throw std::logic_error("error");
+    } else {
+        cout << "Удалось загрузить XML документ" << endl;
+    }
+
+    pugi::xml_node positions_xml = doc.child("resources").child(pos_handler->mode().c_str());
+    cout << "mode: " << pos_handler->mode() << endl;
+    cout << "name: " << pos_handler->name() << endl;
+
+    for (pugi::xml_node position_xml: positions_xml.children("position")) {
+        std::string position_name = position_xml.attribute("name_english").as_string();
+        if(position_name == pos_handler->name()) {
+            cout << "set expected number: " << expected << endl;
+            position_xml.attribute("expected").set_value(expected);
+            pos_handler->set_expected(expected);
+        }
+    }
+
+    if(not doc.save_file(xml_path.c_str())) {
+        cout << "Не удалось сохранить XML документ" << endl;
+        return;
+    }
+    cout << "Удалось сохранить XML документ" << endl;
+
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }

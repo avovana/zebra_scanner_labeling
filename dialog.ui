@@ -88,13 +88,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="comboBox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
+      <widget class="QLabel" name="label_6">
        <property name="font">
         <font>
          <pointsize>14</pointsize>
@@ -102,8 +96,17 @@
          <bold>false</bold>
         </font>
        </property>
-       <property name="styleSheet">
-        <string notr="true">color: rgb(255, 255, 255);</string>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <property name="midLineWidth">
+        <number>1</number>
+       </property>
+       <property name="text">
+        <string/>
        </property>
       </widget>
      </item>
