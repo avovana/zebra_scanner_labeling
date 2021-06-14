@@ -27,6 +27,8 @@ private slots:
     void on_pushButton_4_clicked();
     void on_pushButton_7_clicked();
 
+    void on_comboBox_currentTextChanged(const QString &arg1);
+
 private:
     std::map<std::string, std::string> get_vsds(const std::string & vsd_path) {
         std::ifstream vsd;

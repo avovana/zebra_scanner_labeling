@@ -140,3 +140,37 @@ void MainWindow::on_pushButton_7_clicked()
 {
     new_template = false;
 }
+
+void MainWindow::on_comboBox_currentTextChanged(const QString &arg1) {
+    string name = arg1.toUtf8().constData();
+
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+    // XML open
+    pugi::xml_document doc;
+    if (doc.load_file("positions.xml")) {
+        cout << "Удалось загрузить XML документ" << endl;
+    } else {
+        cout << "Не удалось загрузить XML документ" << endl;
+        throw std::logic_error("error");
+        close();
+    }
+
+    // XML verification
+    pugi::xml_node positions_xml = doc.child("resources").child("input");
+    //pugi::xml_node positions_xml = doc.child("resources").child("output"); // тоже верифицировать
+    if (positions_xml.children("position").begin() == positions_xml.children("position").end()) {
+        cout << "ОШИБКА! В документе нет позиций!" << endl;
+        throw std::logic_error("error");
+    }
+
+    // XML -> names
+    cout << positions_xml << endl;
+    for (pugi::xml_node position_xml: positions_xml.children("position")) {
+        string name_in_xml = position_xml.attribute("name_english").as_string();
+        string vsd = position_xml.attribute("vsd").as_string();
+        if(name == name_in_xml)
+            ui->label->setText(QString::fromStdString(vsd));
+    }
+
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+}
