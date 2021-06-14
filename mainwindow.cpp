@@ -81,15 +81,6 @@ void MainWindow::on_pushButton_clicked() {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
 
     string name = ui->comboBox->currentText().toUtf8().constData();
-    WF mode = WF::vvod;
-    bool new_template = true;
-
-    if(ui->comboBox_2->currentText() == "Вывод товара из оборота")
-        mode = WF::vivod;
-
-    cout << ui->comboBox_3->currentText().toUtf8().constData() << endl;
-    if(ui->comboBox_3->currentText() == "Продолжить шаблон")
-        new_template = false;
 
     cout << "name: " << name << endl;
     cout << "mode: " << mode << endl;
@@ -119,4 +110,33 @@ void MainWindow::on_pushButton_clicked() {
 
     hide();
     f1->exec();
+}
+void MainWindow::on_pushButton_2_clicked()
+{
+    mode = WF::vvod;
+}
+
+void MainWindow::on_pushButton_5_clicked()
+{
+    mode = WF::vivod;
+}
+
+void MainWindow::on_pushButton_3_clicked()
+{
+    new_template = true;
+}
+
+void MainWindow::on_pushButton_6_clicked()
+{
+    new_template = true;
+}
+
+void MainWindow::on_pushButton_4_clicked()
+{
+    new_template = false;
+}
+
+void MainWindow::on_pushButton_7_clicked()
+{
+    new_template = false;
 }

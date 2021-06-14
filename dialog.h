@@ -372,4 +372,5 @@ private:
     bool stop_listen_comport = false;
     Timer timer;
     std::unique_ptr<IPos> pos_handler;
+    int km_number = 0;
 };

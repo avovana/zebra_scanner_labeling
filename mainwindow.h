@@ -3,7 +3,6 @@
 
 #include <QMainWindow>
 #include "dialog.h"
-#include "quest.h"
 
 #include <utility>
 
@@ -21,7 +20,13 @@ public:
 
 private slots:
     void on_pushButton_clicked();
-    
+    void on_pushButton_2_clicked();
+    void on_pushButton_5_clicked();
+    void on_pushButton_3_clicked();
+    void on_pushButton_6_clicked();
+    void on_pushButton_4_clicked();
+    void on_pushButton_7_clicked();
+
 private:
     std::map<std::string, std::string> get_vsds(const std::string & vsd_path) {
         std::ifstream vsd;
@@ -54,7 +59,6 @@ private:
 
         return vsds;
     }
-
 
     void update_current_in_xml (const std::string & name, bool new_template, const WF work_format) {
         cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
@@ -167,6 +171,8 @@ private:
         cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
     }
 
+    WF mode = WF::vvod;
+    bool new_template = true;
 
     Ui::MainWindow *ui;
     Dialog *f1;

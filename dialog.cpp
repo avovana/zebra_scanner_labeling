@@ -56,6 +56,7 @@ Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog),
     pos_handler(std::move(pos_handler_)),
+    km_number(pos_handler->current()),
     sel(*this)
 {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
@@ -314,6 +315,9 @@ void Dialog::barCodeEvent(string bar_code)
 
     if(codeExists(maxPath, bar_code)) {
         ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
+        auto p = ui->textEdit->textCursor();
+        p.movePosition(QTextCursor::End);
+        ui->textEdit->setTextCursor(p);
         cout << "Дубль скана не сохранен" << endl;
         timer.reset();
         return;
@@ -346,7 +350,12 @@ void Dialog::barCodeEvent(string bar_code)
 
     ui->label_7->setNum(pos_handler->current());
 
-    ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 Cчитано успешно</p>").arg(time_buffer));
+    km_number++;
+    ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 КМ считан успешно %2</p>").arg(time_buffer).arg(km_number));
+    auto p = ui->textEdit->textCursor();
+    p.movePosition(QTextCursor::End);
+    ui->textEdit->setTextCursor(p);
+
     timer.reset();
     cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
 
