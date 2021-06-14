@@ -38,35 +38,6 @@ MainWindow::MainWindow(QWidget *parent)
         ui->comboBox->addItem(QString::fromStdString(name_in_xml));
     }
 
-    // update vsd
-    const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
-
-    const auto& vsd_per_names = get_vsds(vsd_path);
-    if(vsd_per_names.empty()) {
-        cout << "ВСД не найдены" << endl;
-        throw std::logic_error("error");
-        close();
-    }
-
-    for(auto &[name_in_vsd_file, vsd] : vsd_per_names) {
-        pugi::xml_node positions_xml = doc.child("resources").child("input");
-
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string name_in_xml = position_xml.attribute("name_english").as_string();
-            if(name_in_vsd_file == name_in_xml) {
-                position_xml.attribute("vsd").set_value(vsd.c_str());
-                cout << "name_in_vsd_file: " << name_in_vsd_file << endl;
-                cout << "set vsd to xml: " << vsd << endl;
-            }
-        }
-    }
-
-    if(not doc.save_file("positions.xml")) {
-        cout << "Не удалось обновить XML документ" << endl;
-        throw std::logic_error("error");
-    } else {
-        cout << "Удалось обновить XML документ" << endl;
-    }
 
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
@@ -85,6 +56,51 @@ void MainWindow::on_pushButton_clicked() {
     cout << "name: " << name << endl;
     cout << "mode: " << mode << endl;
     cout << "new_template: " << new_template << endl;
+
+    //=======================================
+
+    if(new_template) {
+        // update vsd
+        const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
+
+        const auto& vsd_per_names = get_vsds(vsd_path);
+        if(vsd_per_names.empty()) {
+            cout << "ВСД не найдены" << endl;
+            throw std::logic_error("error");
+            close();
+        }
+
+        // XML open
+        pugi::xml_document doc;
+        if (doc.load_file("positions.xml")) {
+            cout << "Удалось загрузить XML документ" << endl;
+        } else {
+            cout << "Не удалось загрузить XML документ" << endl;
+            throw std::logic_error("error");
+            close();
+        }
+
+        for(auto &[name_in_vsd_file, vsd] : vsd_per_names) {
+            pugi::xml_node positions_xml = doc.child("resources").child("input");
+
+            for (pugi::xml_node position_xml: positions_xml.children("position")) {
+                std::string name_in_xml = position_xml.attribute("name_english").as_string();
+                if(name == name_in_xml) {
+                    position_xml.attribute("vsd").set_value(vsd.c_str());
+                    cout << "name_in_vsd_file: " << name_in_vsd_file << endl;
+                    cout << "set vsd to xml: " << vsd << endl;
+                }
+            }
+        }
+
+        if(not doc.save_file("positions.xml")) {
+            cout << "Не удалось обновить XML документ" << endl;
+            throw std::logic_error("error");
+        } else {
+            cout << "Удалось обновить XML документ" << endl;
+        }
+    }
+
 
     // Получить current
     update_current_in_xml(name, new_template, mode);
@@ -124,27 +140,15 @@ void MainWindow::on_pushButton_5_clicked()
 void MainWindow::on_pushButton_3_clicked()
 {
     new_template = true;
-}
+    const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
 
-void MainWindow::on_pushButton_6_clicked()
-{
-    new_template = true;
-}
+    const auto& vsd_per_names = get_vsds(vsd_path);
+    if(vsd_per_names.empty()) {
+        cout << "ВСД не найдены" << endl;
+        throw std::logic_error("error");
+        close();
+    }
 
-void MainWindow::on_pushButton_4_clicked()
-{
-    new_template = false;
-}
-
-void MainWindow::on_pushButton_7_clicked()
-{
-    new_template = false;
-}
-
-void MainWindow::on_comboBox_currentTextChanged(const QString &arg1) {
-    string name = arg1.toUtf8().constData();
-
-    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
     // XML open
     pugi::xml_document doc;
     if (doc.load_file("positions.xml")) {
@@ -155,16 +159,42 @@ void MainWindow::on_comboBox_currentTextChanged(const QString &arg1) {
         close();
     }
 
-    // XML verification
-    pugi::xml_node positions_xml = doc.child("resources").child("input");
-    //pugi::xml_node positions_xml = doc.child("resources").child("output"); // тоже верифицировать
-    if (positions_xml.children("position").begin() == positions_xml.children("position").end()) {
-        cout << "ОШИБКА! В документе нет позиций!" << endl;
-        throw std::logic_error("error");
+    for(auto &[name_in_vsd_file, vsd] : vsd_per_names) {
+        pugi::xml_node positions_xml = doc.child("resources").child("input");
+
+        for (pugi::xml_node position_xml: positions_xml.children("position")) {
+            std::string name_in_xml = position_xml.attribute("name_english").as_string();
+            if(name_in_vsd_file == name_in_xml) {
+                ui->label->setText(QString::fromStdString(vsd));
+            }
+        }
     }
 
-    // XML -> names
-    cout << positions_xml << endl;
+}
+
+void MainWindow::on_pushButton_6_clicked()
+{
+    new_template = true;
+}
+
+void MainWindow::on_pushButton_4_clicked() {
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+
+    new_template = false;
+
+    pugi::xml_document doc;
+    if (doc.load_file("positions.xml")) {
+        cout << "Удалось загрузить XML документ" << endl;
+    } else {
+        cout << "Не удалось загрузить XML документ" << endl;
+        throw std::logic_error("error");
+        close();
+    }
+
+    string name = ui->comboBox->currentText().toStdString();
+
+    pugi::xml_node positions_xml = doc.child("resources").child("input");
+
     for (pugi::xml_node position_xml: positions_xml.children("position")) {
         string name_in_xml = position_xml.attribute("name_english").as_string();
         string vsd = position_xml.attribute("vsd").as_string();
@@ -173,4 +203,9 @@ void MainWindow::on_comboBox_currentTextChanged(const QString &arg1) {
     }
 
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+}
+
+void MainWindow::on_pushButton_7_clicked()
+{
+    new_template = false;
 }
