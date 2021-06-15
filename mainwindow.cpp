@@ -137,8 +137,10 @@ void MainWindow::on_pushButton_5_clicked()
     mode = WF::vivod;
 }
 
-void MainWindow::on_pushButton_3_clicked()
-{
+void MainWindow::on_pushButton_3_clicked() {
+    ui->pushButton_3->setChecked(true);
+    ui->pushButton_4->setChecked(false);
+
     new_template = true;
     const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
 
@@ -179,6 +181,9 @@ void MainWindow::on_pushButton_6_clicked()
 
 void MainWindow::on_pushButton_4_clicked() {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+
+    ui->pushButton_4->setChecked(true);
+    ui->pushButton_3->setChecked(false);
 
     new_template = false;
 

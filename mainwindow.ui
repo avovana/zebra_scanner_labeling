@@ -114,6 +114,9 @@
       <property name="text">
        <string>Предыдущий шаблон</string>
       </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
     <item row="2" column="2">
@@ -176,6 +179,12 @@
       </property>
       <property name="text">
        <string>Новый шаблон</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <property name="checked">
+       <bool>false</bool>
       </property>
      </widget>
     </item>
