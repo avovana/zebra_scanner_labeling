@@ -23,7 +23,7 @@
 #include "dialog.h"
 
 
-SampleEventListener::SampleEventListener(Dialog &dialog_) : dialog(dialog_)
+SampleEventListener::SampleEventListener(Sender &s_) : s(s_)
 {
     //barCodeEvent = barCodeEvent_;
 }
@@ -471,15 +471,15 @@ void SampleEventListener::OnBarcodeEvent(short int eventType, std::string & psca
 
     std::string decoded_bar_code = get_decode_data(pscanData);
 
-
     cout << "bar_code:    " << decoded_bar_code << endl;
-    dialog.barCodeEvent(decoded_bar_code);
+    s.emit_code(decoded_bar_code);
 }
 
 // tokernize string for a given delimiter //
 static char tokernize_buffer[ 256];
-std::vector<std::string> SampleEventListener::stringTokernize(std::string inStr,char cDelim ) {
-    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+std::vector<std::string> SampleEventListener::stringTokernize(std::string inStr,char cDelim )
+{
+    qDebug() << ("function start");
     std::vector<std::string> _return;
 
     int iLength = inStr.size();
@@ -506,19 +506,19 @@ std::vector<std::string> SampleEventListener::stringTokernize(std::string inStr,
         _return.push_back(tokernize_buffer);
     }
 
-    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+    qDebug() << ("function end");
     return _return;
 }
 
 static char buffer_decode_data [ 1024*256] ; // hope we don't have barcodes beyond 256 KB of length. //
-std::string SampleEventListener::get_decode_data(std::string outXml) {
-    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+std::string SampleEventListener::get_decode_data(std::string outXml){
+    qDebug() << ("function start");
     // :TODO:
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result = doc.load_string( outXml.c_str());
     if ( pugi::status_ok != parse_result.status)
     {
-        cout << "loading outXml to pugi failed.";
+        qDebug() << ("loading outXml to pugi failed.");
         return "";
     }
 
@@ -529,7 +529,7 @@ std::string SampleEventListener::get_decode_data(std::string outXml) {
 
     if (iLength < 1)
     {
-        cout << "get_decode_data :: outXml->datalabel has no data";
+        qDebug() << ("get_decode_data :: outXml->datalabel has no data");
     }
 
     std::vector<std::string> vecStrTokernized = stringTokernize(cstrDataLabel, ' ');
@@ -547,7 +547,7 @@ std::string SampleEventListener::get_decode_data(std::string outXml) {
 
     buffer_decode_data[iIndexOutput] = 0;
 
-    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+    qDebug() << ("function end");
 
     return buffer_decode_data;
 }

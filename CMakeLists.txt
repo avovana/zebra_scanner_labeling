@@ -34,8 +34,8 @@ add_executable(${PROJECT_NAME}
     dialog.h
     dialog.ui
     pugixml.cpp
-    comport.cpp
-    comport.h
+    sender.h
+    sender.cpp
 
     ${SOURCE_FILES}
 )

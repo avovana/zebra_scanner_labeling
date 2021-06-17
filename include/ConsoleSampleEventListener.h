@@ -22,6 +22,8 @@
 #include <sstream>
 #include <functional>
 
+#include "sender.h"
+
 using namespace std;
 
 class Dialog;
@@ -29,7 +31,7 @@ class Dialog;
 class SampleEventListener : public IEventListenerXml
 {
 public:
-    explicit SampleEventListener(Dialog &dialog); //std::function<void(const Foo&, int)>
+    explicit SampleEventListener(Sender &s); //std::function<void(const Foo&, int)>
 	virtual ~SampleEventListener();
 
     virtual void OnImageEvent( short eventType, int size, short imageFormat, char* sfimageData, int dataLength, std::string& pScannerData );
@@ -63,7 +65,7 @@ public:
     void AbortFirmwareUpdate();
     void GetVersion();
 
-    Dialog &dialog;
+    Sender &s;
     std::string get_decode_data(std::string outXml);
     std::vector<std::string> stringTokernize(std::string inStr, char cDelim);
 };

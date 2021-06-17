@@ -4,6 +4,10 @@
 #include <QMainWindow>
 #include "dialog.h"
 
+#include "sender.h"
+
+#include "ConsoleSampleEventListener.h"
+
 #include <utility>
 
 QT_BEGIN_NAMESPACE

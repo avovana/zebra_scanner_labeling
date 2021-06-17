@@ -157,7 +157,7 @@ public:
     }
 
     void write_scan(const std::string &file_name, const std::string &bar_code) override {
-        cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+        cout << " =======================" << __PRETTY_FUNCTION__ << endl;
 
         std::cout<<"Шаблон обновлен" << std::endl;
         std::ofstream myfile;
@@ -203,7 +203,7 @@ public:
         myfile.close();
 
         std::cout<<"Шаблон обновлен" << std::endl;
-        cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+        cout << " =======================" << __PRETTY_FUNCTION__ << endl;
     }
 
     int expected() override {
@@ -350,11 +350,13 @@ class Dialog : public QDialog
 {
     Q_OBJECT
 
+public slots:
+    void barCodeEvent(QString bar_code_);
+
 public:
     explicit Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent = nullptr);
     ~Dialog();
 
-    void barCodeEvent(std::string bar_code);
 
     QString get_decode_data(std::string outXml);
     std::vector<std::string> stringTokernize(std::string inStr, char cDelim);
@@ -366,11 +368,13 @@ private slots:
 private:
     Ui::Dialog *ui;
 
-    SampleEventListener sel;
     std::chrono::time_point<std::chrono::high_resolution_clock> last_scan_time;
     std::thread comport_listener;
     bool stop_listen_comport = false;
     Timer timer;
     std::unique_ptr<IPos> pos_handler;
     int km_number = 0;
+
+    Sender sender;
+    SampleEventListener sel;
 };

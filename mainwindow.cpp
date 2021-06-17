@@ -5,11 +5,11 @@
 
 #include "pugixml.hpp"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-{
+#include "sender.h"
+
+MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+
     ui->setupUi(this);
     setWindowState(Qt::WindowMaximized);
 
@@ -42,8 +42,7 @@ MainWindow::MainWindow(QWidget *parent)
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     delete ui;
 }
 

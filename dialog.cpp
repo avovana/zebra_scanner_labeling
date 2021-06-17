@@ -57,21 +57,21 @@ Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     ui(new Ui::Dialog),
     pos_handler(std::move(pos_handler_)),
     km_number(pos_handler->current()),
-    sel(*this)
-{
+    sel(sender) {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
     ui->setupUi(this);
     setWindowState(Qt::WindowMaximized);
 
     const auto infos = QSerialPortInfo::availablePorts();
-
-    for (auto it = infos.rbegin(); it != infos.rend(); ++it)
-        ui->comboBox_2->addItem(it->portName());
+    for (const QSerialPortInfo &info : infos)
+        ui->comboBox_2->addItem(info.portName());
 
     ui->lineEdit->setText(QString::number(pos_handler->expected()));
 
     ui->label_6->setText(QString::fromStdString(pos_handler->name()));
     ui->label_7->setText(QString::number(pos_handler->current()));
+
+    QObject::connect(&sender,&Sender::emitting,this,&Dialog::barCodeEvent);
 
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
@@ -165,8 +165,9 @@ bool Dialog::codeExists(std::string & maxPath, const string & barCode) {
     return false;
 }
 
-void Dialog::barCodeEvent(string bar_code)
+void Dialog::barCodeEvent(QString bar_code_)
 {
+    string bar_code = bar_code_.toUtf8().constData();
     string bar_code_origin = bar_code;
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
 
@@ -251,7 +252,7 @@ void Dialog::barCodeEvent(string bar_code)
         std::string path_curr = file.path();
 
         std::string curName = pos_handler->name();
-        //cout << "curName=" << curName << endl;
+        cout << "curName=" << curName << endl;
 
         std::size_t found = path_curr.find(curName);
         if (found == std::string::npos)
@@ -314,15 +315,15 @@ void Dialog::barCodeEvent(string bar_code)
     bar_code.push_back('"');
 
 
-    //if(codeExists(maxPath, bar_code)) {
-    //    ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
-    //    auto p = ui->textEdit->textCursor();
-    //    p.movePosition(QTextCursor::End);
-    //    ui->textEdit->setTextCursor(p);
-    //    cout << "Дубль скана не сохранен" << endl;
-    //    timer.reset();
-    //    return;
-    //}
+    if(codeExists(maxPath, bar_code)) {
+        ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Дубликат!</p>").arg(time_buffer));
+        auto p = ui->textEdit->textCursor();
+        p.movePosition(QTextCursor::End);
+        ui->textEdit->setTextCursor(p);
+        cout << "Дубль скана не сохранен" << endl;
+        timer.reset();
+        return;
+    }
 
     // Запись скана
     std::string output_file_name = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName;
@@ -350,20 +351,12 @@ void Dialog::barCodeEvent(string bar_code)
     // Оповещение UI
 
     ui->label_7->setNum(pos_handler->current());
-    cout << "Updated current in GUI" << endl;
 
     km_number++;
-    cout << "1" << endl;
-    cout << "2" << endl;
     ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 КМ считан успешно %2</p>").arg(time_buffer).arg(km_number));
-    ui->textEdit->moveCursor(QTextCursor::End);
-    //auto p = ui->textEdit->textCursor();
-    //cout << "3" << endl;
-    //p.movePosition(QTextCursor::End);
-    //cout << "4" << endl;
-    //ui->textEdit->setTextCursor(p);
-
-    cout << "5" << endl;
+    auto p = ui->textEdit->textCursor();
+    p.movePosition(QTextCursor::End);
+    ui->textEdit->setTextCursor(p);
 
     timer.reset();
     cout << "Сохранение скана для текущей позиции завершено успешно" << endl;
