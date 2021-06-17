@@ -478,9 +478,8 @@ void SampleEventListener::OnBarcodeEvent(short int eventType, std::string & psca
 
 // tokernize string for a given delimiter //
 static char tokernize_buffer[ 256];
-std::vector<std::string> SampleEventListener::stringTokernize(std::string inStr,char cDelim )
-{
-    qDebug() << ("function start");
+std::vector<std::string> SampleEventListener::stringTokernize(std::string inStr,char cDelim ) {
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
     std::vector<std::string> _return;
 
     int iLength = inStr.size();
@@ -507,19 +506,19 @@ std::vector<std::string> SampleEventListener::stringTokernize(std::string inStr,
         _return.push_back(tokernize_buffer);
     }
 
-    qDebug() << ("function end");
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
     return _return;
 }
 
 static char buffer_decode_data [ 1024*256] ; // hope we don't have barcodes beyond 256 KB of length. //
-std::string SampleEventListener::get_decode_data(std::string outXml){
-    qDebug() << ("function start");
+std::string SampleEventListener::get_decode_data(std::string outXml) {
+    cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
     // :TODO:
     pugi::xml_document doc;
     pugi::xml_parse_result parse_result = doc.load_string( outXml.c_str());
     if ( pugi::status_ok != parse_result.status)
     {
-        qDebug() << ("loading outXml to pugi failed.");
+        cout << "loading outXml to pugi failed.";
         return "";
     }
 
@@ -530,7 +529,7 @@ std::string SampleEventListener::get_decode_data(std::string outXml){
 
     if (iLength < 1)
     {
-        qDebug() << ("get_decode_data :: outXml->datalabel has no data");
+        cout << "get_decode_data :: outXml->datalabel has no data";
     }
 
     std::vector<std::string> vecStrTokernized = stringTokernize(cstrDataLabel, ' ');
@@ -548,7 +547,7 @@ std::string SampleEventListener::get_decode_data(std::string outXml){
 
     buffer_decode_data[iIndexOutput] = 0;
 
-    qDebug() << ("function end");
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 
     return buffer_decode_data;
 }

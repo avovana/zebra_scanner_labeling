@@ -157,7 +157,7 @@ public:
     }
 
     void write_scan(const std::string &file_name, const std::string &bar_code) override {
-        cout << " =======================" << __PRETTY_FUNCTION__ << endl;
+        cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
 
         std::cout<<"Шаблон обновлен" << std::endl;
         std::ofstream myfile;
@@ -203,7 +203,7 @@ public:
         myfile.close();
 
         std::cout<<"Шаблон обновлен" << std::endl;
-        cout << " =======================" << __PRETTY_FUNCTION__ << endl;
+        cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
     }
 
     int expected() override {
