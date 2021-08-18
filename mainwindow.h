@@ -61,6 +61,14 @@ private:
             vsds.emplace(name,vsd);
         }
 
+        for (auto const& [key, val] : vsds)
+        {
+            std::cout << key        // string (key)
+                      << ':'
+                      << val        // string's value
+                      << std::endl;
+        }
+
         return vsds;
     }
 
@@ -101,7 +109,7 @@ private:
                 cout << "name != name_english" << endl;
                 continue;
             }
-                cout << "name == name_english" << endl;
+            cout << "name == name_english" << endl;
 
             if(new_template) {
                 cout << "in new_template" << endl;

@@ -69,6 +69,13 @@ void MainWindow::on_pushButton_clicked() {
             close();
         }
 
+        auto needed_vsd = vsd_per_names.find(name);
+        if(needed_vsd == vsd_per_names.end()) {
+            cout << "ВСД для данного имени в файле всд не найден" << endl;
+            throw std::logic_error("error");
+            close();
+        }
+
         // XML open
         pugi::xml_document doc;
         if (doc.load_file("positions.xml")) {
@@ -79,16 +86,15 @@ void MainWindow::on_pushButton_clicked() {
             close();
         }
 
-        for(auto &[name_in_vsd_file, vsd] : vsd_per_names) {
-            pugi::xml_node positions_xml = doc.child("resources").child("input");
+        pugi::xml_node positions_xml = doc.child("resources").child("input");
 
-            for (pugi::xml_node position_xml: positions_xml.children("position")) {
-                std::string name_in_xml = position_xml.attribute("name_english").as_string();
-                if(name == name_in_xml) {
-                    position_xml.attribute("vsd").set_value(vsd.c_str());
-                    cout << "name_in_vsd_file: " << name_in_vsd_file << endl;
-                    cout << "set vsd to xml: " << vsd << endl;
-                }
+        for (pugi::xml_node position_xml: positions_xml.children("position")) {
+            std::string name_in_xml = position_xml.attribute("name_english").as_string();
+            std::cout << "  name_in_xml: " << name_in_xml << std::endl;
+            if(name == name_in_xml) {
+                position_xml.attribute("vsd").set_value(needed_vsd->second.c_str());
+                cout << "name: " << name << endl;
+                cout << "set vsd to xml: " << needed_vsd->second << endl;
             }
         }
 
@@ -140,12 +146,21 @@ void MainWindow::on_pushButton_3_clicked() {
     ui->pushButton_3->setChecked(true);
     ui->pushButton_4->setChecked(false);
 
+    string name = ui->comboBox->currentText().toStdString();
+
     new_template = true;
     const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
 
     const auto& vsd_per_names = get_vsds(vsd_path);
     if(vsd_per_names.empty()) {
         cout << "ВСД не найдены" << endl;
+        throw std::logic_error("error");
+        close();
+    }
+
+    auto needed_vsd = vsd_per_names.find(name);
+    if(needed_vsd == vsd_per_names.end()) {
+        cout << "ВСД для данного имени в файле всд не найден" << endl;
         throw std::logic_error("error");
         close();
     }
@@ -160,14 +175,14 @@ void MainWindow::on_pushButton_3_clicked() {
         close();
     }
 
-    for(auto &[name_in_vsd_file, vsd] : vsd_per_names) {
-        pugi::xml_node positions_xml = doc.child("resources").child("input");
+    pugi::xml_node positions_xml = doc.child("resources").child("input");
 
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string name_in_xml = position_xml.attribute("name_english").as_string();
-            if(name_in_vsd_file == name_in_xml) {
-                ui->label->setText(QString::fromStdString(vsd));
-            }
+    for (pugi::xml_node position_xml: positions_xml.children("position")) {
+        std::string name_in_xml = position_xml.attribute("name_english").as_string();
+        std::cout << "  name_in_xml: " << name_in_xml << std::endl;
+        if(name == name_in_xml) {
+            std::cout << "  name: " << name << "= name_in_xml: " << name_in_xml << "vsd=" << needed_vsd->second << std::endl;
+            ui->label->setText(QString::fromStdString(needed_vsd->second));
         }
     }
 
