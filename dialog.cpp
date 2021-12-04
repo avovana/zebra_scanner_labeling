@@ -62,6 +62,23 @@ Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     ui->setupUi(this);
     setWindowState(Qt::WindowMaximized);
 
+    // XML open
+    pugi::xml_document doc_vars;
+    if (doc_vars.load_file("vars.xml")) {
+        cout << "Удалось загрузить vars.xml документ" << endl;
+    } else {
+        cout << "Не удалось загрузить vars.xml документ" << endl;
+        throw std::logic_error("error");
+        close();
+    }
+
+    pugi::xml_node position_path_xml = doc_vars.child("vars").child("position_path");
+    pugi::xml_node shared_folder_xml = doc_vars.child("vars").child("shared_folder");
+    position_path = position_path_xml.text().get();
+    shared_folder = shared_folder_xml.text().get();
+    cout << "position_path: " << position_path << endl;
+    cout << "shared_folder: " << shared_folder << endl;
+
     const auto infos = QSerialPortInfo::availablePorts();
     for (const QSerialPortInfo &info : infos)
         ui->comboBox_2->addItem(info.portName());
@@ -213,15 +230,15 @@ void Dialog::barCodeEvent(QString bar_code_)
 
     cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
 
-    create_directories("/mnt/hgfs/shared_folder/" + pos_handler->mode());
-    create_directories("/mnt/hgfs/shared_folder/ki/");
+    create_directories(shared_folder + pos_handler->mode());
+    create_directories(shared_folder + "ki/");
 
     // Создание шаблонов
     string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
     if (pos_handler->current() == 0 || pos_handler->current() == 1500) {
          std::ofstream myfile_shared;
 
-         string myfile_shared_name = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + filename;
+         string myfile_shared_name = shared_folder + pos_handler->mode() + "/" + filename;
          myfile_shared.open(myfile_shared_name);
          if(not myfile_shared.is_open()) {
              std::cout<<"Ошибка создания файла шаблона"<<std::endl;
@@ -235,7 +252,7 @@ void Dialog::barCodeEvent(QString bar_code_)
 
 
          string ki_file_name = std::string(filename_buffer) + " " + pos_handler->name() +  "_ki" + ".csv";
-         string my_ki_file_shared_name = "/mnt/hgfs/shared_folder/ki/" + ki_file_name;
+         string my_ki_file_shared_name = shared_folder + "ki/" + ki_file_name;
          std::ofstream ki_file(my_ki_file_shared_name);
 
          cout <<  "Создан новый шаблон КИ для этой позиции: " << ki_file_name << endl;
@@ -248,7 +265,7 @@ void Dialog::barCodeEvent(QString bar_code_)
 
     cout << "Шаблоны этой позиции:" << endl;
     // Поиск самого последнего шаблона
-    for (const auto & file : directory_iterator(std::filesystem::path("/mnt/hgfs/shared_folder/") / pos_handler->mode())) {
+    for (const auto & file : directory_iterator(std::filesystem::path(shared_folder) / pos_handler->mode())) {
         std::string path_curr = file.path();
 
         std::string curName = pos_handler->name();
@@ -282,7 +299,7 @@ void Dialog::barCodeEvent(QString bar_code_)
     max = 0;
     //=================================
     cout << "Шаблоны ки этой позиции:" << endl;
-    for (const auto & file : directory_iterator(std::filesystem::path("/mnt/hgfs/shared_folder/ki/"))) {
+    for (const auto & file : directory_iterator(std::filesystem::path(shared_folder + "ki/"))) {
         std::string path_curr = file.path();
 
         std::string curName = pos_handler->name();
@@ -326,7 +343,7 @@ void Dialog::barCodeEvent(QString bar_code_)
     }
 
     // Запись скана
-    std::string output_file_name = "/mnt/hgfs/shared_folder/" + pos_handler->mode() + "/" + maxPathFileName;
+    std::string output_file_name = shared_folder + pos_handler->mode() + "/" + maxPathFileName;
 
     pos_handler->write_scan(output_file_name, bar_code);
 

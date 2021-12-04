@@ -377,6 +377,9 @@ private:
     std::unique_ptr<IPos> pos_handler;
     int km_number = 0;
 
+    std::string position_path;
+    std::string shared_folder;
+
     Sender sender;
     SampleEventListener sel;
 };
