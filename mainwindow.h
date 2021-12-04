@@ -183,6 +183,8 @@ private:
         cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
     }
 
+    std::string position_path;
+    std::string vsd_path;
     WF mode = WF::vvod;
     bool new_template = true;
 

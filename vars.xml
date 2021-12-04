@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<vars>
+	<position_path>/mnt/hgfs/shared_folder/positions.xml</position_path>
+	<vsd_path>/mnt/hgfs/shared_folder/vsd.csv</vsd_path>
+</vars>

@@ -4,18 +4,37 @@
 #include <tuple>
 
 #include "pugixml.hpp"
+#include "foobar_version.h"
 
 #include "sender.h"
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
+    cout <<  " Vers: " << FOOBAR_VERSION << endl;
 
     ui->setupUi(this);
     setWindowState(Qt::WindowMaximized);
 
     // XML open
+    pugi::xml_document doc_vars;
+    if (doc_vars.load_file("vars.xml")) {
+        cout << "Удалось загрузить vars.xml документ" << endl;
+    } else {
+        cout << "Не удалось загрузить vars.xml документ" << endl;
+        throw std::logic_error("error");
+        close();
+    }
+
+    pugi::xml_node position_path_xml = doc_vars.child("vars").child("position_path");
+    pugi::xml_node vsd_path_xml = doc_vars.child("vars").child("vsd_path");
+    position_path = position_path_xml.text().get();
+    vsd_path = vsd_path_xml.text().get();
+    cout << "position_path: " << position_path << endl;
+    cout << "vsd_path: " << vsd_path << endl;
+
+    // XML open
     pugi::xml_document doc;
-    if (doc.load_file("positions.xml")) {
+    if (doc.load_file(position_path.c_str())) {
         cout << "Удалось загрузить XML документ" << endl;
     } else {
         cout << "Не удалось загрузить XML документ" << endl;
@@ -59,53 +78,7 @@ void MainWindow::on_pushButton_clicked() {
     //=======================================
 
     if(new_template) {
-        // update vsd
-        const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
-
-        const auto& vsd_per_names = get_vsds(vsd_path);
-        if(vsd_per_names.empty()) {
-            cout << "ВСД не найдены" << endl;
-            throw std::logic_error("error");
-            close();
-        }
-
-        auto needed_vsd = vsd_per_names.find(name);
-        if(needed_vsd == vsd_per_names.end()) {
-            cout << "ВСД для данного имени в файле всд не найден" << endl;
-            throw std::logic_error("error");
-            close();
-        }
-
-        // XML open
-        pugi::xml_document doc;
-        if (doc.load_file("positions.xml")) {
-            cout << "Удалось загрузить XML документ" << endl;
-        } else {
-            cout << "Не удалось загрузить XML документ" << endl;
-            throw std::logic_error("error");
-            close();
-        }
-
-        pugi::xml_node positions_xml = doc.child("resources").child("input");
-
-        for (pugi::xml_node position_xml: positions_xml.children("position")) {
-            std::string name_in_xml = position_xml.attribute("name_english").as_string();
-            std::cout << "  name_in_xml: " << name_in_xml << std::endl;
-            if(name == name_in_xml) {
-                position_xml.attribute("vsd").set_value(needed_vsd->second.c_str());
-                cout << "name: " << name << endl;
-                cout << "set vsd to xml: " << needed_vsd->second << endl;
-            }
-        }
-
-        if(not doc.save_file("positions.xml")) {
-            cout << "Не удалось обновить XML документ" << endl;
-            throw std::logic_error("error");
-        } else {
-            cout << "Удалось обновить XML документ" << endl;
-        }
     }
-
 
     // Получить current
     update_current_in_xml(name, new_template, mode);
@@ -149,25 +122,10 @@ void MainWindow::on_pushButton_3_clicked() {
     string name = ui->comboBox->currentText().toStdString();
 
     new_template = true;
-    const string vsd_path = string("/mnt/hgfs/shared_folder/") + string("vsd.csv");
-
-    const auto& vsd_per_names = get_vsds(vsd_path);
-    if(vsd_per_names.empty()) {
-        cout << "ВСД не найдены" << endl;
-        throw std::logic_error("error");
-        close();
-    }
-
-    auto needed_vsd = vsd_per_names.find(name);
-    if(needed_vsd == vsd_per_names.end()) {
-        cout << "ВСД для данного имени в файле всд не найден" << endl;
-        throw std::logic_error("error");
-        close();
-    }
 
     // XML open
     pugi::xml_document doc;
-    if (doc.load_file("positions.xml")) {
+    if (doc.load_file(position_path.c_str())) {
         cout << "Удалось загрузить XML документ" << endl;
     } else {
         cout << "Не удалось загрузить XML документ" << endl;
@@ -179,13 +137,13 @@ void MainWindow::on_pushButton_3_clicked() {
 
     for (pugi::xml_node position_xml: positions_xml.children("position")) {
         std::string name_in_xml = position_xml.attribute("name_english").as_string();
+        std::string vsd = position_xml.attribute("vsd").as_string();
         std::cout << "  name_in_xml: " << name_in_xml << std::endl;
         if(name == name_in_xml) {
-            std::cout << "  name: " << name << "= name_in_xml: " << name_in_xml << "vsd=" << needed_vsd->second << std::endl;
-            ui->label->setText(QString::fromStdString(needed_vsd->second));
+            std::cout << "  name: " << name << "= name_in_xml: " << name_in_xml << "vsd=" << vsd << std::endl;
+            ui->label->setText(QString::fromStdString(vsd));
         }
     }
-
 }
 
 void MainWindow::on_pushButton_6_clicked()
@@ -202,7 +160,7 @@ void MainWindow::on_pushButton_4_clicked() {
     new_template = false;
 
     pugi::xml_document doc;
-    if (doc.load_file("positions.xml")) {
+    if (doc.load_file(position_path.c_str())) {
         cout << "Удалось загрузить XML документ" << endl;
     } else {
         cout << "Не удалось загрузить XML документ" << endl;
