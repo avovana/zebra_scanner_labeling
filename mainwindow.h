@@ -32,54 +32,15 @@ private slots:
     void on_pushButton_7_clicked();
 
 private:
-    std::map<std::string, std::string> get_vsds(const std::string & vsd_path) {
-        std::ifstream vsd;
-
-        vsd.open(vsd_path);
-        if(not vsd.is_open()) {
-            std::cout<<"Ошибка открытия vsd.csv"<<std::endl;
-            return {};
-        } else {
-            std::cout<<"Открытие vsd.csv успешно"<<std::endl;
-        }
-
-        std::map<std::string, std::string> vsds;
-        string line;
-        for (int i = 0; std::getline(vsd, line); ++i) {
-            cout << line;
-            int pos = line.size() - 12;
-            cout << "line: " << line;
-            cout << "line.size()=" << line.size()  << " line.size() - 12=" << pos << endl;
-            string name = line.substr(0, line.find(","));
-            int comma_pos = line.find(",");
-            int size_of_vsd = line.size() - 1 - (comma_pos + 1);
-            cout << "comma_pos: " << comma_pos << " size_of_vsd: " << size_of_vsd << endl;
-            string vsd = line.substr(comma_pos + 1, size_of_vsd);
-
-            cout << "name: " << name << " vsd=" << vsd << " vsd.size()=" << vsd.size() << endl;
-            cout << "==============" << endl;
-            vsds.emplace(name,vsd);
-        }
-
-        for (auto const& [key, val] : vsds)
-        {
-            std::cout << key        // string (key)
-                      << ':'
-                      << val        // string's value
-                      << std::endl;
-        }
-
-        return vsds;
-    }
-
     void update_current_in_xml (const std::string & name, bool new_template, const WF work_format) {
         cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
 
+        cout << "try to open: " << "positions.xml" << endl;
         pugi::xml_document doc;
         if (doc.load_file("positions.xml")) {
-            cout << "Удалось загрузить XML документ" << endl;
+            cout << "Удалось загрузить positions.xml документ" << endl;
         } else {
-            cout << "Не удалось загрузить XML документ" << endl;
+            cout << "Не удалось загрузить positions.xml документ" << endl;
             throw std::logic_error("error");
             close();
         }
@@ -184,7 +145,7 @@ private:
     }
 
     std::string position_path;
-    std::string vsd_path;
+    std::string shared_folder;
     WF mode = WF::vvod;
     bool new_template = true;
 

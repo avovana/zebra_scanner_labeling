@@ -91,13 +91,15 @@ ostream& operator<<( ostream&  out, Position& pos );
 class InputPos : public IPos {
 public:
     InputPos(const std::string & name) {
+        // XML open
         pugi::xml_document doc;
         if (!doc.load_file("positions.xml")) {
-            cout << "Не удалось загрузить XML документ" << endl;
+            cout << "Не удалось загрузить positions.xml документ" << endl;
             return;
         } else {
-            cout << "Удалось загрузить XML документ" << endl;
+            cout << "Удалось загрузить positions.xml документ" << endl;
         }
+        //====================
 
         pugi::xml_node inn_xml = doc.child("resources").child("inn");
         pugi::xml_node version = doc.child("resources").child("version");

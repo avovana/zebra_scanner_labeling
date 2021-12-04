@@ -395,10 +395,10 @@ void Dialog::update_expected(int expected) {
     pugi::xml_document doc;
 
     if (not doc.load_file(xml_path.c_str())) {
-        cout << "Не удалось загрузить XML документ" << endl;
+        cout << "Не удалось загрузить xml_path.c_str()) документ" << xml_path.c_str() << endl;
         throw std::logic_error("error");
     } else {
-        cout << "Удалось загрузить XML документ" << endl;
+        cout << "Удалось загрузить xml_path.c_str()) документ" << xml_path.c_str() << endl;
     }
 
     pugi::xml_node positions_xml = doc.child("resources").child(pos_handler->mode().c_str());

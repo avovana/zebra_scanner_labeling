@@ -26,18 +26,18 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
     }
 
     pugi::xml_node position_path_xml = doc_vars.child("vars").child("position_path");
-    pugi::xml_node vsd_path_xml = doc_vars.child("vars").child("vsd_path");
+    pugi::xml_node shared_folder_xml = doc_vars.child("vars").child("shared_folder");
     position_path = position_path_xml.text().get();
-    vsd_path = vsd_path_xml.text().get();
+    shared_folder = shared_folder_xml.text().get();
     cout << "position_path: " << position_path << endl;
-    cout << "vsd_path: " << vsd_path << endl;
+    cout << "shared_folder: " << shared_folder << endl;
 
     // XML open
     pugi::xml_document doc;
     if (doc.load_file(position_path.c_str())) {
-        cout << "Удалось загрузить XML документ" << endl;
+        cout << "Удалось загрузить position документ" << endl;
     } else {
-        cout << "Не удалось загрузить XML документ" << endl;
+        cout << "Не удалось загрузить position документ" << endl;
         throw std::logic_error("error");
         close();
     }
@@ -57,7 +57,11 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
         ui->comboBox->addItem(QString::fromStdString(name_in_xml));
     }
 
-
+    if(not doc.save_file("positions.xml")) {
+        cout << "Не удалось сохранить positions.xml документ" << endl;
+        return;
+    }
+    cout << "удалось сохранить positions.xml документ" << endl;
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
 
@@ -69,6 +73,7 @@ MainWindow::~MainWindow() {
 void MainWindow::on_pushButton_clicked() {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
 
+    cout << "111: " << endl;
     string name = ui->comboBox->currentText().toUtf8().constData();
 
     cout << "name: " << name << endl;
@@ -125,10 +130,10 @@ void MainWindow::on_pushButton_3_clicked() {
 
     // XML open
     pugi::xml_document doc;
-    if (doc.load_file(position_path.c_str())) {
-        cout << "Удалось загрузить XML документ" << endl;
+    if (doc.load_file("positions.xml")) {
+        cout << "Удалось загрузить positions.xml документ"  << endl;
     } else {
-        cout << "Не удалось загрузить XML документ" << endl;
+        cout << "Не Удалось загрузить positions.xml документ"  << endl;
         throw std::logic_error("error");
         close();
     }
@@ -160,10 +165,10 @@ void MainWindow::on_pushButton_4_clicked() {
     new_template = false;
 
     pugi::xml_document doc;
-    if (doc.load_file(position_path.c_str())) {
-        cout << "Удалось загрузить XML документ" << endl;
+    if (doc.load_file("positions.xml")) {
+        cout << "Удалось загрузить positions.xml документ"  << endl;
     } else {
-        cout << "Не удалось загрузить XML документ" << endl;
+        cout << "Не Удалось загрузить positions.xml документ"  << endl;
         throw std::logic_error("error");
         close();
     }
