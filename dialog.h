@@ -288,8 +288,12 @@ public:
             struct tm * now = localtime( & t );
             strftime (date_buffer,80,date_pattern.c_str(),now);
 
-            os << "ИНН участника оборота,Причина вывода из оборота,Дата вывода из оборота,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа,Регистрационный номер ККТ,Версия" << endl;
-            os << position.inn << "," << position.reason_of_cancellation << "," << date_buffer << "," << position.document_type << "," << position.document_number << "," << position.document_date << "," << position.document_name << "," << position.register_number_kkt << ",4" << endl;
+//            os << "ИНН участника оборота,Причина вывода из оборота,Дата вывода из оборота,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа,Регистрационный номер ККТ,Версия" << endl;
+//            os << position.inn << "," << position.reason_of_cancellation << "," << date_buffer << "," << position.document_type << "," << position.document_number << "," << position.document_date << "," << position.document_name << "," << position.register_number_kkt << ",4" << endl;
+//            os << "КИ,Цена за единицу,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа" << endl;
+
+            os << "ИНН участника оборота,ИНН покупателя,Причина вывода из оборота,Другая причина вывода из оборота,Дата вывода из оборота,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа,Идентификатор ФИАС,Версия" << endl;
+            os << position.inn << "," << "," << position.reason_of_cancellation << "," <<  "," << date_buffer << "," << position.document_type << "," << position.document_number << "," << position.document_date << "," << position.document_name << "," << position.register_number_kkt << ",4" << endl;
             os << "КИ,Цена за единицу,Тип первичного документа,Номер первичного документа,Дата первичного документа,Наименование первичного документа" << endl;
 
     }
@@ -311,20 +315,24 @@ public:
         strftime (date_buffer,80,date_pattern.c_str(),now);
 
         myfile << bar_code << ","
-               << position.price << ","
-               << position.document_type << ","
-               << position.document_number << ","
-               << position.document_date << ","
-               << position.document_name;
+               << ",,,,";
+//               << position.price << ","
+//               << position.document_type << ","
+//               << position.document_number << ","
+//               << position.document_date << ","
+//               << position.document_name;
 
         ++position.current;
 
-        if(not position.current == position.expected)
+        if(position.current != position.expected) {
             myfile << endl;
+            std::cout<< "write scan" << std::endl;
+        }
 
         myfile.close();
 
         std::cout<<"Шаблон обновлен" << std::endl;
+        cout << " =======================" << __PRETTY_FUNCTION__ << endl;
     }
 
     int expected() override {

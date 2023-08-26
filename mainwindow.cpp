@@ -4,13 +4,13 @@
 #include <tuple>
 
 #include "pugixml.hpp"
-#include "foobar_version.h"
+//#include "foobar_version.h"
 
 #include "sender.h"
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
-    cout <<  " Vers: " << FOOBAR_VERSION << endl;
+    cout <<  " Vers: " << 111 << endl;
 
     ui->setupUi(this);
     setWindowState(Qt::WindowMaximized);

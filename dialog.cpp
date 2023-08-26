@@ -12,6 +12,8 @@
 #include <regex>
 
 #include <filesystem>
+#include <thread>
+#include <chrono>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -91,6 +93,17 @@ Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     QObject::connect(&sender,&Sender::emitting,this,&Dialog::barCodeEvent);
 
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+
+//    std::thread t = std::thread([&]{
+//        using namespace std::chrono_literals;
+//        std::this_thread::sleep_for(5s);
+//        this->barCodeEvent("243543453453ewrdsfdsf33");
+//        std::this_thread::sleep_for(2s);
+//        this->barCodeEvent("243543453453ewrdsfdsf32");
+//        std::this_thread::sleep_for(1s);
+//        this->barCodeEvent("243543453453ewrdsfdsf31");
+//    });
+//    t.detach();
 }
 
 void Dialog::listen_comport() {
