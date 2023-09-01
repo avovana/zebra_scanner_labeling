@@ -43,6 +43,10 @@ add_executable(${PROJECT_NAME}
     dialog.cpp
     dialog.h
     dialog.ui
+    output.h
+    output.cpp
+    output.ui
+    position.h
     pugixml.cpp
     sender.h
     sender.cpp

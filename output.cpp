@@ -1,5 +1,5 @@
-#include "dialog.h"
-#include "ui_dialog.h"
+#include "output.h"
+#include "ui_output.h"
 
 #include <QMainWindow>
 #include <QMessageBox>
@@ -24,9 +24,39 @@ using namespace std;
 using namespace std::filesystem;
 using std::filesystem::directory_iterator;
 
-Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
+ostream& operator<<( ostream&  out, Position& pos ) {
+    out << "code_tn_ved: " << pos.code_tn_ved << " " << endl
+        << "document_type: " << pos.document_type << " " << endl
+        << "document_number: " << pos.document_number << " " << endl
+        << "document_date: " << pos.document_date << " " << endl
+        << "vsd: " << pos.vsd << " " << endl
+        << "name: " << pos.name << " " << endl
+        << "inn:" << pos.inn << endl
+        << "expected: " << pos.expected << endl
+        << "current: " << pos.current << endl;
+
+    return out;
+}
+
+ostream& operator<<( ostream&  out, CancelPos& pos ) {
+    out << pos.reason_of_cancellation << " " << endl
+        << pos.document_type << " " << endl
+        << pos.document_number << " " << endl
+        << pos.document_date << " " << endl
+        << pos.document_name << " " << endl
+        << pos.register_number_kkt << " " << endl
+        << pos.price << " " << endl
+        << pos.inn << endl
+        << pos.name  << " " << endl
+        << "expected: " << pos.expected << endl
+        << "current: " << pos.current << endl;
+
+    return out;
+}
+
+Output::Output(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::Dialog),
+    ui(new Ui::Output),
     pos_handler(std::move(pos_handler_)),
     km_number(pos_handler->current()),
     sel(sender) {
@@ -51,18 +81,15 @@ Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
     cout << "position_path: " << position_path << endl;
     cout << "shared_folder: " << shared_folder << endl;
 
-    const auto infos = QSerialPortInfo::availablePorts();
-    for (const QSerialPortInfo &info : infos)
-        ui->comboBox_2->addItem(info.portName());
+    QObject::connect(&sender,&Sender::emitting,this,&Output::barCodeEvent);
 
-    ui->lineEdit->setText(QString::number(pos_handler->expected()));
+    std::string date_pattern = std::string("%Y-%m-%d %H-%M");
+    time_t tt = time(0);
+    struct tm * now = localtime(&tt);
+    char date_buffer[80];
+    strftime (date_buffer, 80, date_pattern.c_str(), now);
 
-    ui->label_6->setText(QString::fromStdString(pos_handler->name()));
-    ui->label_7->setText(QString::number(pos_handler->current()));
-
-    QObject::connect(&sender,&Sender::emitting,this,&Dialog::barCodeEvent);
-
-    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
+    ui->date_lbl->setText(date_buffer);
 
     std::thread t = std::thread([&]{
         using namespace std::chrono_literals;
@@ -72,21 +99,31 @@ Dialog::Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent) :
         this->barCodeEvent("243543453453ewrdsfdsf32");
         std::this_thread::sleep_for(1s);
         this->barCodeEvent("243543453453ewrdsfdsf31");
+        std::this_thread::sleep_for(15s);
+        this->barCodeEvent("243543453453ewrdsfdsf30");
     });
     t.detach();
+
+    cout << __PRETTY_FUNCTION__ << " end c-tor =======================" << endl;
 }
 
-void Dialog::listen_comport() {
+void Output::listen_comport() {
     QSerialPort serialPort;
 
-    //const auto serialPortInfos = QSerialPortInfo::availablePorts();
-    const QString serialPortName = ui->comboBox_2->currentText();
+    const auto comport_info = QSerialPortInfo::availablePorts();
 
-    cout << "Comport. Port name: " << serialPortName.toUtf8().constData() << endl;
-    serialPort.setPortName(ui->comboBox_2->currentText());
+    if(comport_info.empty()) {
+        cerr << "Fail. No comports" << endl;
+        return;
+    }
+
+    auto comport = comport_info[0];
+
+    cout << "Comport. Port name: " << comport.portName().toUtf8().constData() << endl;
+    serialPort.setPortName(comport.portName());
     serialPort.setBaudRate(57600);
     if (!serialPort.open(QIODevice::ReadOnly)) {
-        cout << "Comport. FAIL open: " << serialPortName.toUtf8().constData() << " serialPort.error(): " << serialPort.error() << endl;
+        cerr << "Comport. FAIL open: " << comport.portName().toUtf8().constData() << " serialPort.error(): " << serialPort.error() << endl;
         return;
     } else {
         cout << "Comport. SUCCESS open" << endl;
@@ -98,10 +135,10 @@ void Dialog::listen_comport() {
             readData.append(serialPort.readAll());
 
         if (serialPort.error() == QSerialPort::ReadError) {
-            cout << "Comport. Read error: " << serialPort.errorString().toUtf8().constData() << endl;
+            cerr << "Comport. Read error: " << serialPort.errorString().toUtf8().constData() << endl;
             continue;
         } else if (serialPort.error() == QSerialPort::TimeoutError && readData.isEmpty()) {
-            //cout << "Comport. No data in comport for 1sec" << endl;
+            // cout << "Comport. No data in comport for 1sec" << endl;
             continue;
         }
         cout << "Comport. Data received: " << QString(readData).toUtf8().constData() << endl;
@@ -114,7 +151,7 @@ void Dialog::listen_comport() {
         strftime (time_buffer,80,time_pattern.c_str(),now);
 
         typedef std::chrono::milliseconds ms;
-        cout << "time differece: " << timer.elapsed() << " ms" << endl;
+        cout << "Comport. Time differece: " << timer.elapsed() << " ms" << endl;
         if(timer.elapsed() > 1000)
             ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Внимание, КМ не считан!</p>").arg(time_buffer));
         else
@@ -122,7 +159,7 @@ void Dialog::listen_comport() {
     }
 }
 
-Dialog::~Dialog()
+Output::~Output()
 {
     if(comport_listener.joinable()) {
         stop_listen_comport = true;
@@ -133,7 +170,7 @@ Dialog::~Dialog()
     delete ui;
 }
 
-bool Dialog::codeExists(std::string & maxPath, const string & barCode) {
+bool Output::codeExists(std::string & maxPath, const string & barCode) {
     std::ifstream myfile(maxPath);
     cout << "codeExists: " << endl;
     cout << "barCode: " << barCode << endl;
@@ -165,7 +202,7 @@ bool Dialog::codeExists(std::string & maxPath, const string & barCode) {
     return false;
 }
 
-void Dialog::barCodeEvent(QString bar_code_)
+void Output::barCodeEvent(QString bar_code_)
 {
     string bar_code = bar_code_.toUtf8().constData();
     string bar_code_origin = bar_code;
@@ -203,33 +240,30 @@ void Dialog::barCodeEvent(QString bar_code_)
     cout << "bar_code substr= " << bar_code << endl;
 
     // Проверка на конец программе
-    if(pos_handler->current() == pos_handler->expected()) {
-        cout << "barCodeEvent: " << "current == expected" << endl;
-        ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Шаблон завершен. Скан не будет сохранен!</p>").arg(time_buffer));
-        //close();
-        return;
-    }
+//    if(pos_handler->current() == pos_handler->expected()) {
+//        cout << "barCodeEvent: " << "current == expected" << endl;
+//        ui->textEdit->append(QString::fromUtf8("<p style='color: red'> %1 Шаблон завершен. Скан не будет сохранен!</p>").arg(time_buffer));
+//        //close();
+//        return;
+//    }
     cout << "barCodeEvent: " << "pos_handler->current() != pos_handler->expected()" << endl;
 
     cout << endl << "Сохранение скана для текущей позиции: " << endl << pos_handler->to_string() << endl;
-
 
     create_directories(shared_folder + pos_handler->mode());
     create_directories(shared_folder + "ki/");
 
     // Создание шаблонов
-    string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
-    cout << "filename: " << filename << endl;
+//    string filename = std::string(filename_buffer) + " " + pos_handler->name() + ".csv";
+    string filename = std::string(filename_buffer) + ".csv";
     if (pos_handler->current() == 0 || pos_handler->current() == 1500) {
          std::ofstream myfile_shared;
 
          string myfile_shared_name = shared_folder + pos_handler->mode() + "/" + filename;
          myfile_shared.open(myfile_shared_name);
          if(not myfile_shared.is_open()) {
-             std::cout << "Ошибка создания файла шаблона" << std::endl;
+             std::cout<<"Ошибка создания файла шаблона"<<std::endl;
              return;
-         } else {
-             std::cout << "Новый шаблон успешно создан: " << myfile_shared_name << std::endl;
          }
 
          pos_handler->write_header(myfile_shared);
@@ -238,7 +272,8 @@ void Dialog::barCodeEvent(QString bar_code_)
          myfile_shared.close();
 
 
-         string ki_file_name = std::string(filename_buffer) + " " + pos_handler->name() +  "_ki" + ".csv";
+//         string ki_file_name = std::string(filename_buffer) + " " + pos_handler->name() +  "_ki" + ".csv";
+         string ki_file_name = std::string(filename_buffer) + "_ki" + ".csv";
          string my_ki_file_shared_name = shared_folder + "ki/" + ki_file_name;
          std::ofstream ki_file(my_ki_file_shared_name);
 
@@ -331,7 +366,6 @@ void Dialog::barCodeEvent(QString bar_code_)
 
     // Запись скана
     std::string output_file_name = shared_folder + pos_handler->mode() + "/" + maxPathFileName;
-    cout << "Записываю скан в " << output_file_name << endl;
 
     pos_handler->write_scan(output_file_name, bar_code);
 
@@ -340,14 +374,14 @@ void Dialog::barCodeEvent(QString bar_code_)
 
     ki_file.open (maxPathKi, std::ios_base::app);
     if(not ki_file.is_open()) {
-        std::cout<<"Ошибка открытия шаблона для данной позиции" << std::endl;
+        std::cout << "Ошибка открытия шаблона ki" << std::endl;
         return;
     }
 
     ki_file << bar_code_origin;
 
-    if(pos_handler->current() != pos_handler->expected())
-        ki_file << endl;
+//    if(pos_handler->current() != pos_handler->expected())
+//        ki_file << endl;
 
     ki_file.close();
 
@@ -355,7 +389,7 @@ void Dialog::barCodeEvent(QString bar_code_)
 
     // Оповещение UI
 
-    ui->label_7->setNum(pos_handler->current());
+    ui->quantity_lbl->setNum(pos_handler->current());
 
     km_number++;
     ui->textEdit->append(QString::fromUtf8("<p style='color: green'> %1 КМ считан успешно %2</p>").arg(time_buffer).arg(km_number));
@@ -374,29 +408,25 @@ void Dialog::barCodeEvent(QString bar_code_)
         msgBox.setIcon(QMessageBox::Information);
         msgBox.setDefaultButton(QMessageBox::Ok);
         msgBox.exec();
-        cout << "Почти завершил..." << endl;
         close();
-        cout << "Завершил." << endl;
     }
-    cout << "Супер завершил." << endl;
 
     cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
 
-void Dialog::on_pushButton_clicked()
+void Output::on_pushButton_clicked()
 {
+    pos_handler->set_reason_of_canceletion(ui->comboBox->currentText().toUtf8().constData());
     if(not comport_listener.joinable())
-        comport_listener = std::thread(&Dialog::listen_comport, this);
+        comport_listener = std::thread(&Output::listen_comport, this);
 
     if(STATUS_OK != sel.Open())
         qDebug() << "Corescanner service is not Active.";
 
     sel.GetScanners();
-    ui->lineEdit->setEnabled(false);
-    update_expected(ui->lineEdit->text().toInt());
 }
 
-void Dialog::update_expected(int expected) {
+void Output::update_expected(int expected) {
     cout << __PRETTY_FUNCTION__ << " start =======================" << endl;
     std::string xml_path = "positions.xml";
 

@@ -82,8 +82,8 @@ void MainWindow::on_pushButton_clicked() {
 
     //=======================================
 
-    if(new_template) {
-    }
+//    if(new_template) {
+//    }
 
     // Получить current
     update_current_in_xml(name, new_template, mode);
@@ -94,21 +94,21 @@ void MainWindow::on_pushButton_clicked() {
     switch (mode) {
     case vvod:
         pos_handler.reset(new InputPos(name));
+        input_ui_ = new Dialog(std::move(pos_handler), this);
+        input_ui_->exec();
         break;
     case vivod:
         pos_handler.reset(new OutputPos(name));
+        output_ui_ = new Output(std::move(pos_handler), this);
+        output_ui_->exec();
         break;
     default:
         cout << "bad mode: " << mode << endl;
         throw std::logic_error("error");
     }
 
-    f1 = new Dialog(std::move(pos_handler), this);
-
-    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
-
     hide();
-    f1->exec();
+    cout << __PRETTY_FUNCTION__ << " end =======================" << endl;
 }
 void MainWindow::on_pushButton_2_clicked()
 {

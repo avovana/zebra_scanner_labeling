@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Output</class>
+ <widget class="QDialog" name="Output">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>795</width>
+    <height>522</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(186, 189, 182);</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="1" column="1" colspan="2">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label_6">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>-1</pointsize>
+         <weight>50</weight>
+         <bold>false</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QLabel{font-size: 50px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
+       </property>
+       <property name="lineWidth">
+        <number>3</number>
+       </property>
+       <property name="midLineWidth">
+        <number>1</number>
+       </property>
+       <property name="text">
+        <string>Вывод из оборота</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="3">
+    <widget class="QLabel" name="label">
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>-1</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel{font-size: 25px;font-family: Arial;color: rgb(255, 255, 255);background-color: rgb(92, 99, 118);}</string>
+     </property>
+     <property name="text">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;НПП СИСТЕМА +79962009007&lt;/p&gt;&lt;p&gt;Промышленная автоматизация&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1" colspan="3">
+    <layout class="QGridLayout" name="gridLayout_3">
+     <item row="2" column="0" colspan="2">
+      <widget class="QTextEdit" name="textEdit"/>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLabel" name="quantity_lbl">
+       <property name="styleSheet">
+        <string notr="true">QLabel{font-size: 43px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="quantity_lbl_2">
+       <property name="styleSheet">
+        <string notr="true">QLabel{font-size: 43px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <property name="text">
+        <string>Количество</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="0" column="1" colspan="2">
+    <widget class="QLabel" name="label_2">
+     <property name="font">
+      <font>
+       <family>Arial</family>
+       <pointsize>-1</pointsize>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QLabel{font-size: 35px;font-family: Arial;color: rgb(255, 255, 255);background-color: rgb(92, 99, 118);}</string>
+     </property>
+     <property name="text">
+      <string>ООО &quot;МЕЧТА&quot;</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="3">
+    <layout class="QGridLayout" name="gridLayout_2">
+     <item row="0" column="1">
+      <widget class="QLabel" name="label_4">
+       <property name="styleSheet">
+        <string notr="true">QLabel{font-size: 25px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+       <property name="lineWidth">
+        <number>3</number>
+       </property>
+       <property name="text">
+        <string>Дата</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2" rowspan="3">
+      <widget class="QPushButton" name="pushButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>200</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>46</pointsize>
+         <weight>9</weight>
+         <italic>false</italic>
+         <bold>false</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">font: 75 46pt &quot;Arial&quot;;
+color: rgb(115, 210, 22)</string>
+       </property>
+       <property name="text">
+        <string>Начать</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="styleSheet">
+        <string notr="true">QLabel{font-size: 25px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+       <property name="lineWidth">
+        <number>3</number>
+       </property>
+       <property name="text">
+        <string>По причине</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="date_lbl">
+       <property name="styleSheet">
+        <string notr="true">QLabel{font-size: 33px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QComboBox" name="comboBox">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>120</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QComboBox{font-size: 33px;font-family: Arial;color: rgb(255, 255, 255);}</string>
+       </property>
+       <item>
+        <property name="text">
+         <string>Уничтожение</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Утилизация</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Безвозмездная передача</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Другое</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Использование для производственных целей</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Использование для собственных нужд</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Истечение срока годности</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Конфискация</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Розничная продажа</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Утрата</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Фасовка</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "dialog.h"
+#include "output.h"
 
 #include "sender.h"
 
@@ -150,6 +151,7 @@ private:
     bool new_template = true;
 
     Ui::MainWindow *ui;
-    Dialog *f1;
+    Dialog *input_ui_;
+    Output *output_ui_;
 };
 #endif // MAINWINDOW_H

@@ -7,10 +7,10 @@
 #include "position.h"
 
 namespace Ui {
-class Dialog;
+class Output;
 }
 
-class Dialog : public QDialog
+class Output : public QDialog
 {
     Q_OBJECT
 
@@ -18,8 +18,8 @@ public slots:
     void barCodeEvent(QString bar_code_);
 
 public:
-    explicit Dialog(std::unique_ptr<IPos> pos_handler_, QWidget *parent = nullptr);
-    ~Dialog();
+    explicit Output(std::unique_ptr<IPos> pos_handler_, QWidget *parent = nullptr);
+    ~Output();
 
 
     QString get_decode_data(std::string outXml);
@@ -30,7 +30,7 @@ public:
 private slots:
     void on_pushButton_clicked();
 private:
-    Ui::Dialog *ui;
+    Ui::Output *ui;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> last_scan_time;
     std::thread comport_listener;
